@@ -1751,25 +1751,23 @@ double IdrisiRasterBand::GetMaximum( int *pbSuccess )
 /************************************************************************/
 
 double IdrisiRasterBand::GetNoDataValue( int *pbSuccess )
-{      
+{
     IdrisiDataset *poGDS = (IdrisiDataset *) poDS;
 
     double dfNoData;
-    const char *pszFlagDefn;
+    const char *pszFlagDefn = NULL;
 
     if( CSLFetchNameValue( poGDS->papszRDC, rdcFLAG_DEFN ) != NULL )
         pszFlagDefn = CSLFetchNameValue( poGDS->papszRDC, rdcFLAG_DEFN );
     else if( CSLFetchNameValue( poGDS->papszRDC, rdcFLAG_DEFN2 ) != NULL )
         pszFlagDefn = CSLFetchNameValue( poGDS->papszRDC, rdcFLAG_DEFN2 );
-    else
-        pszFlagDefn = CPLStrdup( "none" );
 
     // ------------------------------------------------------------------------
-    // If Flag_Def is not "none", Flag_Value means "background" 
+    // If Flag_Def is not "none", Flag_Value means "background"
     // or "missing data"
     // ------------------------------------------------------------------------
 
-    if( ! EQUAL( pszFlagDefn, "none" ) )
+    if( pszFlagDefn != NULL && ! EQUAL( pszFlagDefn, "none" ) )
     {
         dfNoData = CPLAtof_nz( CSLFetchNameValue( poGDS->papszRDC, rdcFLAG_VALUE ) );
         if( pbSuccess )
@@ -2893,8 +2891,8 @@ CPLErr IdrisiDataset::Wkt2GeoReference( const char *pszProjString,
     if( EQUAL( pszProjName, SRS_PT_LAMBERT_CONFORMAL_CONIC_2SP ) ||
         EQUAL( pszProjName, SRS_PT_TRANSVERSE_MERCATOR ) )
     {
-        const char *pszPCSCode;
-        const char *pszID = CPLStrdup( oSRS.GetAuthorityCode( "PROJCS" ) );
+        char *pszPCSCode = NULL;
+        char *pszID = CPLStrdup( oSRS.GetAuthorityCode( "PROJCS" ) );
         if( strlen( pszID ) > 0 )
         {
             pszPCSCode = CPLStrdup( CSVGetField( CSVFilename( "stateplane.csv" ),
@@ -2921,8 +2919,10 @@ CPLErr IdrisiDataset::Wkt2GeoReference( const char *pszProjString,
                     *pszRefSystem   = CPLStrdup( CPLSPrintf( rstSPC, nNADYear, pszState, nZone ) );
                     *pszRefUnit     = GetUnitDefault( oSRS.GetAttrValue( "UNIT" ),
                                                       CPLSPrintf( "%f", oSRS.GetLinearUnits() ) );
+                    CPLFree( pszState );
                     return CE_None;
                 }
+                CPLFree( pszState );
             }
         }//
 
@@ -2947,17 +2947,19 @@ CPLErr IdrisiDataset::Wkt2GeoReference( const char *pszProjString,
             dfLat = (int)(fabs(dfLat) * 100 + 0.5) / 100.0;
             *pszRefSystem = CPLStrdup(GetSpcs(dfLon, dfLat));
         }
-		
+
         if(*pszRefSystem != NULL)
         {
             //Convert 83 TO 27
             if(isOldNAD)
             {
                 char pszOutRefSystem[9];
-                NAD83to27(pszOutRefSystem, *pszRefSystem);	
+                NAD83to27(pszOutRefSystem, *pszRefSystem);
                 *pszRefSystem = CPLStrdup(pszOutRefSystem);
             }
             *pszRefUnit = GetUnitDefault( oSRS.GetAttrValue( "UNIT" ), CPLSPrintf( "%f", oSRS.GetLinearUnits() ) );
+            CPLFree(pszPCSCode);
+            CPLFree(pszID);
             return CE_None;
         }
 
@@ -3358,4 +3360,3 @@ void GDALRegister_IDRISI()
         GetGDALDriverManager()->RegisterDriver( poDriver );
     }
 }
-

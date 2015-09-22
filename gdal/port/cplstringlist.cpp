@@ -473,7 +473,7 @@ static int CPLCompareKeyValueString(const char* pszKVa, const char* pszKVb)
 {
     const char* pszItera = pszKVa;
     const char* pszIterb = pszKVb;
-    while( TRUE )
+    while( true )
     {
         char cha = *pszItera;
         char chb = *pszIterb;
@@ -534,7 +534,8 @@ CPLStringList &CPLStringList::Sort()
     Count();
     MakeOurOwnCopy();
 
-    qsort( papszList, nCount, sizeof(char*), llCompareStr );
+    if( nCount )
+        qsort( papszList, nCount, sizeof(char*), llCompareStr );
     bIsSorted = TRUE;
     
     return *this;

@@ -344,22 +344,25 @@ static void addProjArg( const OGRSpatialReference *poSRS, CPLXMLNode *psBase,
 /*      Added the <usesAxis> element and down.                          */
 /************************************************************************/
 
-static CPLXMLNode *addAxis( CPLXMLNode *psXMLParent, 
+static CPLXMLNode *addAxis( CPLXMLNode *psXMLParent,
                             const char *pszAxis, // "Lat", "Long", "E" or "N"
                             const OGR_SRSNode * /* poUnitsSrc */ )
 
 {
-    CPLXMLNode *psAxisXML;
-
-    psAxisXML = 
-        CPLCreateXMLNode( 
+    CPLXMLNode *psAxisXML =
+        CPLCreateXMLNode(
             CPLCreateXMLNode( psXMLParent, CXT_Element, "gml:usesAxis" ),
             CXT_Element, "gml:CoordinateSystemAxis" );
+    if (!psAxisXML)
+    {
+        CPLError( CE_Failure, CPLE_AppDefined, "addAxis failed." );
+        return NULL;
+    }
     addGMLId( psAxisXML );
 
     if( EQUAL(pszAxis,"Lat") )
     {
-        CPLCreateXMLNode( 
+        CPLCreateXMLNode(
             CPLCreateXMLNode( psAxisXML, CXT_Attribute, "gml:uom" ),
             CXT_Text, "urn:ogc:def:uom:EPSG::9102" );
 
@@ -755,7 +758,7 @@ OGRErr OSRExportToXML( OGRSpatialReferenceH hSRS, char **ppszRawXML,
                        const char *pszDialect )
 
 {
-    VALIDATE_POINTER1( hSRS, "OSRExportToXML", CE_Failure );
+    VALIDATE_POINTER1( hSRS, "OSRExportToXML", OGRERR_FAILURE );
 
     return ((OGRSpatialReference *) hSRS)->exportToXML( ppszRawXML, 
                                                         pszDialect );
@@ -1337,8 +1340,8 @@ OGRErr OGRSpatialReference::importFromXML( const char *pszXML )
 OGRErr OSRImportFromXML( OGRSpatialReferenceH hSRS, const char *pszXML )
 
 {
-    VALIDATE_POINTER1( hSRS, "OSRImportFromXML", CE_Failure );
-    VALIDATE_POINTER1( pszXML, "OSRImportFromXML", CE_Failure );
+    VALIDATE_POINTER1( hSRS, "OSRImportFromXML", OGRERR_FAILURE );
+    VALIDATE_POINTER1( pszXML, "OSRImportFromXML", OGRERR_FAILURE );
 
     return ((OGRSpatialReference *) hSRS)->importFromXML( pszXML );
 }

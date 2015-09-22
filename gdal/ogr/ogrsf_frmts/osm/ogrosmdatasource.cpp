@@ -174,8 +174,8 @@ static CPLString GetInterestLayersForDSName(const CPLString& osDSName)
 /*                        OGROSMDataSource()                            */
 /************************************************************************/
 
-OGROSMDataSource::OGROSMDataSource()
-
+OGROSMDataSource::OGROSMDataSource() :
+    hSelectNodeBetweenStmt(NULL)
 {
     nLayers = 0;
     papoLayers = NULL;
@@ -519,42 +519,35 @@ int OGROSMDataSource::FlushCurrentSector()
 
 int OGROSMDataSource::AllocBucket(int iBucket)
 {
-    int bOOM = FALSE;
     if( bCompressNodes )
     {
         int nRem = iBucket % (PAGE_SIZE / BUCKET_SECTOR_SIZE_ARRAY_SIZE);
         if( papsBuckets[iBucket - nRem].u.panSectorSize == NULL )
             papsBuckets[iBucket - nRem].u.panSectorSize = (GByte*)VSICalloc(1, PAGE_SIZE);
-        if( papsBuckets[iBucket - nRem].u.panSectorSize == NULL )
+        if( papsBuckets[iBucket - nRem].u.panSectorSize != NULL )
         {
-            papsBuckets[iBucket].u.panSectorSize = NULL;
-            bOOM = TRUE;
-        }
-        else
             papsBuckets[iBucket].u.panSectorSize = papsBuckets[iBucket - nRem].u.panSectorSize + nRem * BUCKET_SECTOR_SIZE_ARRAY_SIZE;
+            return TRUE;
+        }
+        papsBuckets[iBucket].u.panSectorSize = NULL;
     }
     else
     {
         int nRem = iBucket % (PAGE_SIZE / BUCKET_BITMAP_SIZE);
         if( papsBuckets[iBucket - nRem].u.pabyBitmap == NULL )
             papsBuckets[iBucket - nRem].u.pabyBitmap = (GByte*)VSICalloc(1, PAGE_SIZE);
-        if( papsBuckets[iBucket - nRem].u.pabyBitmap == NULL )
+        if( papsBuckets[iBucket - nRem].u.pabyBitmap != NULL )
         {
-            papsBuckets[iBucket].u.pabyBitmap = NULL;
-            bOOM = TRUE;
-        }
-        else
             papsBuckets[iBucket].u.pabyBitmap = papsBuckets[iBucket - nRem].u.pabyBitmap + nRem * BUCKET_BITMAP_SIZE;
+            return TRUE;
+        }
+        papsBuckets[iBucket].u.pabyBitmap = NULL;
     }
 
-    if( bOOM )
-    {
-        CPLError(CE_Failure, CPLE_AppDefined, "AllocBucket() failed. Use OSM_USE_CUSTOM_INDEXING=NO");
-        bStopParsing = TRUE;
-        return FALSE;
-    }
-
-    return TRUE;
+    // Out of memory.
+    CPLError(CE_Failure, CPLE_AppDefined, "AllocBucket() failed. Use OSM_USE_CUSTOM_INDEXING=NO");
+    bStopParsing = TRUE;
+    return FALSE;
 }
 
 /************************************************************************/
@@ -681,6 +674,7 @@ int OGROSMDataSource::FlushCurrentSectorCompressedCase()
         Bucket* psBucket = &papsBuckets[nBucketOld];
         if( psBucket->u.panSectorSize == NULL && !AllocBucket(nBucketOld) )
             return FALSE;
+        CPLAssert( psBucket->u.panSectorSize != NULL );
         psBucket->u.panSectorSize[nOffInBucketReducedOld] =
                                     COMPRESS_SIZE_TO_BYTE(nCompressSize);
 
@@ -754,10 +748,11 @@ int OGROSMDataSource::IndexPointCustom(OSMNode* psNode)
 
     if( !bCompressNodes )
     {
-        int nBitmapIndex = nOffInBucketReduced / 8;
-        int nBitmapRemainer = nOffInBucketReduced % 8;
+        const int nBitmapIndex = nOffInBucketReduced / 8;
+        const int nBitmapRemainer = nOffInBucketReduced % 8;
         if( psBucket->u.pabyBitmap == NULL && !AllocBucket(nBucket) )
             return FALSE;
+        CPLAssert( psBucket->u.pabyBitmap != NULL );
         psBucket->u.pabyBitmap[nBitmapIndex] |= (1 << nBitmapRemainer);
     }
 
@@ -4190,7 +4185,7 @@ OGRLayer * OGROSMDataSource::ExecuteSQL( const char *pszSQLCommand,
             CPLErr eErr = sSelectInfo.preparse( pszSQLCommand );
             CPLPopErrorHandler();
 
-            if( eErr == CPLE_None )
+            if( eErr == CE_None )
             {
                 swq_select* pCurSelect = &sSelectInfo;
                 while(pCurSelect != NULL)

@@ -64,7 +64,7 @@ OGRCouchDBDataSource::~OGRCouchDBDataSource()
     {
         char** papszOptions = NULL;
         papszOptions = CSLSetNameValue(papszOptions, "CLOSE_PERSISTENT", CPLSPrintf("CouchDB:%p", this));
-        CPLHTTPFetch( osURL, papszOptions);
+        CPLHTTPDestroyResult( CPLHTTPFetch( osURL, papszOptions ) );
         CSLDestroy(papszOptions);
     }
 
@@ -736,7 +736,7 @@ class OGRCouchDBOneLineLayer : public OGRLayer
 OGRLayer * OGRCouchDBDataSource::ExecuteSQLStats( const char *pszSQLCommand )
 {
     swq_select sSelectInfo;
-    if( sSelectInfo.preparse( pszSQLCommand ) != CPLE_None )
+    if( sSelectInfo.preparse( pszSQLCommand ) != CE_None )
     {
         return NULL;
     }

@@ -36,8 +36,8 @@ CPL_CVSID("$Id$");
 /*                          OGRMSSQLSpatialDataSource()                 */
 /************************************************************************/
 
-OGRMSSQLSpatialDataSource::OGRMSSQLSpatialDataSource()
-
+OGRMSSQLSpatialDataSource::OGRMSSQLSpatialDataSource() :
+    bDSUpdate(FALSE)
 {
     pszName = NULL;
     pszCatalog = NULL;
@@ -61,17 +61,15 @@ OGRMSSQLSpatialDataSource::OGRMSSQLSpatialDataSource()
 OGRMSSQLSpatialDataSource::~OGRMSSQLSpatialDataSource()
 
 {
-    int         i;
-
-    for( i = 0; i < nLayers; i++ )
+    for( int i = 0; i < nLayers; i++ )
         delete papoLayers[i];
-    
+
     CPLFree( papoLayers );
 
     CPLFree( pszName );
     CPLFree( pszCatalog );
 
-    for( i = 0; i < nKnownSRID; i++ )
+    for( int i = 0; i < nKnownSRID; i++ )
     {
         if( papoSRS[i] != NULL )
             papoSRS[i]->Release();
@@ -159,7 +157,7 @@ OGRLayer *OGRMSSQLSpatialDataSource::GetLayerByName( const char* pszLayerName )
 /*                            DeleteLayer()                             */
 /************************************************************************/
 
-int OGRMSSQLSpatialDataSource::DeleteLayer( int iLayer )
+OGRErr OGRMSSQLSpatialDataSource::DeleteLayer( int iLayer )
 
 {
     if( iLayer < 0 || iLayer >= nLayers )
@@ -470,7 +468,7 @@ OGRLayer * OGRMSSQLSpatialDataSource::ICreateLayer( const char * pszLayerName,
     if( bFID64 )
         poLayer->SetMetadataItem(OLMD_FID64, "YES");
     
-    if (poLayer->Initialize(pszSchemaName, pszTableName, pszGeomColumn, nCoordDimension, nSRSId, pszWKT, eType) == OGRERR_FAILURE)
+    if (poLayer->Initialize(pszSchemaName, pszTableName, pszGeomColumn, nCoordDimension, nSRSId, pszWKT, eType) == CE_Failure)
     {
         CPLFree( pszSchemaName );
         CPLFree( pszTableName );

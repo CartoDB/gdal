@@ -286,7 +286,8 @@ def basic_test_11():
         gdaltest.post_reason('fail')
         return 'fail'
 
-    ds = gdal.OpenEx('data/byte.tif', open_options = ['FOO'] )
+    with gdaltest.error_handler():
+        ds = gdal.OpenEx('data/byte.tif', open_options = ['FOO'] )
     if ds is None:
         gdaltest.post_reason('fail')
         return 'fail'
@@ -333,6 +334,19 @@ def basic_test_11():
     ds = gdal.OpenEx('non existing', gdal.OF_VERBOSE_ERROR)
     gdal.PopErrorHandler()
     if ds is not None or gdal.GetLastErrorMsg() == '':
+        gdaltest.post_reason('fail')
+        return 'fail'
+
+    old_use_exceptions_status = gdal.GetUseExceptions()
+    gdal.UseExceptions()
+    got_exception = False
+    try:
+        ds = gdal.OpenEx('non existing')
+    except:
+        got_exception = True
+    if old_use_exceptions_status == 0:
+        gdal.DontUseExceptions()
+    if not got_exception:
         gdaltest.post_reason('fail')
         return 'fail'
 
@@ -564,4 +578,3 @@ if __name__ == '__main__':
     gdaltest.run_tests( gdaltest_list )
 
     gdaltest.summarize()
-

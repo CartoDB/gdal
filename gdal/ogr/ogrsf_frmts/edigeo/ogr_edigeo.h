@@ -74,7 +74,8 @@ class OGREDIGEOLayer : public OGRLayer
     virtual int                 TestCapability( const char * );
 
     virtual OGRErr              GetExtent(OGREnvelope *psExtent, int bForce);
-
+    virtual OGRErr      GetExtent(int iGeomField, OGREnvelope *psExtent, int bForce)
+                { return OGRLayer::GetExtent(iGeomField, psExtent, bForce); }
 
     void                        AddFeature(OGRFeature* poFeature);
 
@@ -119,7 +120,7 @@ class OGREDIGEOObjectDescriptor
 class OGREDIGEOAttributeDescriptor
 {
     public:
-        OGREDIGEOAttributeDescriptor() {}
+        OGREDIGEOAttributeDescriptor() : nWidth(0) {}
 
         CPLString osRID;        /* e.g. TEX2_id */
         CPLString osNameRID;    /* e.g. ID_N_ATT_TEX2 */

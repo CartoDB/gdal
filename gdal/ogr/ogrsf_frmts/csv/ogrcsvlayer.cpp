@@ -218,51 +218,48 @@ char **OGRCSVReadParseLineL( VSILFILE * fp, char chDelimiter,
 /*      file pointer.                                                   */
 /************************************************************************/
 
-OGRCSVLayer::OGRCSVLayer( const char *pszLayerNameIn, 
+OGRCSVLayer::OGRCSVLayer( const char *pszLayerNameIn,
                           VSILFILE * fp, const char *pszFilename,
                           int bNew, int bInWriteMode,
-                          char chDelimiter )
-
+                          char chDelimiter ) :
+    poFeatureDefn(NULL),
+    fpCSV(fp),
+    nNextFID(1),
+    bHasFieldNames(FALSE),
+    bUseCRLF(FALSE),
+    bNeedRewindBeforeRead(FALSE),
+    eGeometryFormat(OGR_CSV_GEOM_NONE),
+    pszFilename(NULL),
+    bCreateCSVT(FALSE),
+    bWriteBOM(FALSE),
+    nCSVFieldCount(0),
+    panGeomFieldIndex(NULL),
+    bFirstFeatureAppendedDuringSession(TRUE),
+    bHiddenWKTColumn(FALSE),
+    iNfdcLongitudeS(-1),
+    iNfdcLatitudeS(-1),
+    bDontHonourStrings(FALSE),
+    iLongitudeField(-1),
+    iLatitudeField(-1),
+    iZField(-1),
+    bIsEurostatTSV(FALSE),
+    nEurostatDims(0),
+    nTotalFeatures(-1),
+    bWarningBadTypeOrWidth(FALSE),
+    bKeepSourceColumns(FALSE),
+    bKeepGeomColumns(TRUE),
+    bMergeDelimiter(FALSE),
+    bEmptyStringNull(FALSE)
 {
-    fpCSV = fp;
-
-    nCSVFieldCount = 0;
-    panGeomFieldIndex = NULL;
-    iNfdcLatitudeS = iNfdcLongitudeS = -1;
-    iLatitudeField = iLongitudeField = -1;
-    iZField = -1;
-    bHasFieldNames = FALSE;
-    this->bInWriteMode = bInWriteMode;
     this->bNew = bNew;
+    this->bInWriteMode = bInWriteMode;
     this->pszFilename = CPLStrdup(pszFilename);
     this->chDelimiter = chDelimiter;
-
-    bFirstFeatureAppendedDuringSession = TRUE;
-    bHiddenWKTColumn = FALSE;
-    bUseCRLF = FALSE;
-    bNeedRewindBeforeRead = FALSE;
-    eGeometryFormat = OGR_CSV_GEOM_NONE;
-
-    nNextFID = 1;
 
     poFeatureDefn = new OGRFeatureDefn( pszLayerNameIn );
     SetDescription( poFeatureDefn->GetName() );
     poFeatureDefn->Reference();
     poFeatureDefn->SetGeomType( wkbNone );
-
-    bCreateCSVT = FALSE;
-    bDontHonourStrings = FALSE;
-    bWriteBOM = FALSE;
-
-    bIsEurostatTSV = FALSE;
-    nEurostatDims = 0;
-
-    nTotalFeatures = -1;
-    bWarningBadTypeOrWidth = FALSE;
-    bKeepSourceColumns = FALSE;
-    bKeepGeomColumns = TRUE;
-    
-    bMergeDelimiter = FALSE;
 }
 
 /************************************************************************/
@@ -326,6 +323,7 @@ void OGRCSVLayer::BuildFeatureDefn( const char* pszNfdcGeomField,
 {
 
     bMergeDelimiter = CSLFetchBoolean(papszOpenOptions, "MERGE_SEPARATOR", FALSE);
+    bEmptyStringNull = CSLFetchBoolean(papszOpenOptions, "EMPTY_STRING_AS_NULL", FALSE);
 
 /* -------------------------------------------------------------------- */
 /*      If this is not a new file, read ahead to establish if it is     */
@@ -445,7 +443,6 @@ void OGRCSVLayer::BuildFeatureDefn( const char* pszNfdcGeomField,
             CPLAtof(papszTokens[4]) >= -90 && CPLAtof(papszTokens[4]) <= 90 &&
             CPLAtof(papszTokens[5]) >= -180 && CPLAtof(papszTokens[4]) <= 180)
         {
-            bHasFieldNames = TRUE;
             CSLDestroy(papszTokens);
             papszTokens = NULL;
 
@@ -486,12 +483,14 @@ void OGRCSVLayer::BuildFeatureDefn( const char* pszNfdcGeomField,
             iLongitudeField = 5;
 
             nFieldCount = 0;
+
+            bDontHonourStrings = TRUE;
         }
     }
 
 
 /* -------------------------------------------------------------------- */
-/*      Search a csvt file for types                                */
+/*      Search a csvt file for types                                    */
 /* -------------------------------------------------------------------- */
     char** papszFieldTypes = NULL;
     if (!bNew) {
@@ -508,7 +507,7 @@ void OGRCSVLayer::BuildFeatureDefn( const char* pszNfdcGeomField,
     }
 
 /* -------------------------------------------------------------------- */
-/*      Optionaly auto-detect types                                     */
+/*      Optionally auto-detect types                                    */
 /* -------------------------------------------------------------------- */
     if( !bNew && papszFieldTypes == NULL &&
         CSLTestBoolean(CSLFetchNameValueDef(papszOpenOptions,
@@ -521,7 +520,7 @@ void OGRCSVLayer::BuildFeatureDefn( const char* pszNfdcGeomField,
                                                      "KEEP_SOURCE_COLUMNS", "NO"));
         }
     }
-    
+
     char** papszGeomPossibleNames =
          CSLTokenizeString2(CSLFetchNameValue(papszOpenOptions, "GEOM_POSSIBLE_NAMES"), ",", 0);
     char** papszXPossibleNames =
@@ -800,7 +799,7 @@ void OGRCSVLayer::BuildFeatureDefn( const char* pszNfdcGeomField,
     else if ( iLatitudeField != -1 && iLongitudeField != -1 )
     {
         if( poFeatureDefn->GetGeomFieldCount() == 0 )
-            poFeatureDefn->SetGeomType( (iZField) ? wkbPoint25D : wkbPoint );
+            poFeatureDefn->SetGeomType( (iZField >= 0) ? wkbPoint25D : wkbPoint );
         else
             iLatitudeField = iLongitudeField = -1;
     }
@@ -1010,7 +1009,7 @@ char** OGRCSVLayer::AutodetectFieldTypes(char** papszOpenOptions, int nFieldCoun
                 if( eType == CPL_VALUE_INTEGER )
                 {
                     GIntBig nVal = CPLAtoGIntBig(papszTokens[iField]);
-                    if( (GIntBig)(int)nVal != nVal )
+                    if( !CPL_INT64_FITS_ON_INT32(nVal) )
                         eOGRFieldType = OFTInteger64;
                     else
                         eOGRFieldType = OFTInteger;
@@ -1200,15 +1199,15 @@ char** OGRCSVLayer::AutodetectFieldTypes(char** papszOpenOptions, int nFieldCoun
 OGRCSVLayer::~OGRCSVLayer()
 
 {
-    if( m_nFeaturesRead > 0 && poFeatureDefn != NULL )
+    if( m_nFeaturesRead > 0 )
     {
         CPLDebug( "CSV", "%d features read on layer '%s'.",
-                  (int) m_nFeaturesRead, 
+                  (int) m_nFeaturesRead,
                   poFeatureDefn->GetName() );
     }
 
     // Make sure the header file is written even if no features are written.
-    if (bNew && bInWriteMode)
+    if ( bNew && bInWriteMode )
         WriteHeader();
 
     CPLFree( panGeomFieldIndex );
@@ -1316,7 +1315,7 @@ OGRFeature * OGRCSVLayer::GetNextUnfilteredFeature()
     int         iOGRField = 0;
     int         nAttrCount = MIN(CSLCount(papszTokens), nCSVFieldCount );
     CPLValueType eType;
-    
+
     for( iAttr = 0; !bIsEurostatTSV && iAttr < nAttrCount; iAttr++)
     {
         if( (iAttr == iLongitudeField || iAttr == iLatitudeField || iAttr == iZField ) &&
@@ -1466,7 +1465,8 @@ OGRFeature * OGRCSVLayer::GetNextUnfilteredFeature()
         }
         else
         {
-            if( !poFieldDefn->IsIgnored() )
+            if( !poFieldDefn->IsIgnored() &&
+                (!bEmptyStringNull || papszTokens[iAttr][0] != '\0') )
             {
                 poFeature->SetField( iOGRField, papszTokens[iAttr] );
                 if( !bWarningBadTypeOrWidth && poFieldDefn->GetWidth() > 0 &&
@@ -2142,6 +2142,9 @@ OGRErr OGRCSVLayer::ICreateFeature( OGRFeature *poNewFeature )
         VSIFPutcL( 13, fpCSV );
     VSIFPutcL( '\n', fpCSV );
 
+    if( nTotalFeatures >= 0 )
+        nTotalFeatures ++;
+
     return OGRERR_NONE;
 }
 
@@ -2202,7 +2205,7 @@ void OGRCSVLayer::SetWriteBOM(int bWriteBOM)
 
 GIntBig OGRCSVLayer::GetFeatureCount( int bForce )
 {
-    if (bInWriteMode || m_poFilterGeom != NULL || m_poAttrQuery != NULL)
+    if (m_poFilterGeom != NULL || m_poAttrQuery != NULL)
         return OGRLayer::GetFeatureCount(bForce);
 
     if (nTotalFeatures >= 0)
@@ -2212,18 +2215,50 @@ GIntBig OGRCSVLayer::GetFeatureCount( int bForce )
         return 0;
 
     ResetReading();
-
-    char **papszTokens;
-    nTotalFeatures = 0;
-    while(TRUE)
+    
+    if( chDelimiter == '\t' && bDontHonourStrings )
     {
-        papszTokens = GetNextLineTokens();
-        if( papszTokens == NULL )
-            break;
+        char szBuffer[4096+1];
 
-        nTotalFeatures ++;
+        nTotalFeatures = 0;
+        int bLastWasNewLine = FALSE;
+        while( TRUE )
+        {
+            int nRead = VSIFReadL(szBuffer, 1, 4096, fpCSV);
+            szBuffer[nRead] = 0;
+            if( nTotalFeatures == 0 && szBuffer[0] != 13 && szBuffer[0] != 10 )
+                nTotalFeatures = 1;
+            for(int i=0;i<nRead;i++)
+            {
+                if( szBuffer[i] == 13 || szBuffer[i] == 10 )
+                {
+                    bLastWasNewLine = TRUE;
+                }
+                else if( bLastWasNewLine )
+                {
+                    nTotalFeatures ++;
+                    bLastWasNewLine = FALSE;
+                }
+            }
 
-        CSLDestroy(papszTokens);
+            if( nRead < 4096 )
+                break;
+        }
+    }
+    else
+    {
+        char **papszTokens;
+        nTotalFeatures = 0;
+        while(TRUE)
+        {
+            papszTokens = GetNextLineTokens();
+            if( papszTokens == NULL )
+                break;
+
+            nTotalFeatures ++;
+
+            CSLDestroy(papszTokens);
+        }
     }
 
     ResetReading();

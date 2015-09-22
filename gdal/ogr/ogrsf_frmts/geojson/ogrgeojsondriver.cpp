@@ -53,6 +53,8 @@ class OGRESRIFeatureServiceLayer: public OGRLayer
         OGRFeature* GetNextFeature();
         GIntBig GetFeatureCount( int bForce = TRUE );
         OGRErr              GetExtent(OGREnvelope *psExtent, int bForce = TRUE);
+        virtual OGRErr      GetExtent(int iGeomField, OGREnvelope *psExtent, int bForce)
+                { return OGRLayer::GetExtent(iGeomField, psExtent, bForce); }
         int TestCapability( const char* pszCap );
         OGRFeatureDefn* GetLayerDefn() { return poFeatureDefn; }
 };
@@ -136,7 +138,7 @@ void OGRESRIFeatureServiceLayer::ResetReading()
 
 OGRFeature* OGRESRIFeatureServiceLayer::GetNextFeature()
 {
-    while( TRUE )
+    while( true )
     {
         int bWasInFirstPage = !bOtherPage;
         OGRFeature* poSrcFeat = poDS->GetUnderlyingLayer()->GetNextFeature();
@@ -401,8 +403,8 @@ static GDALDataset* OGRGeoJSONDriverOpen( GDALOpenInfo* poOpenInfo )
     if( OGRGeoJSONDriverIdentifyInternal(poOpenInfo, nSrcType) == FALSE )
         return NULL;
 
-    OGRGeoJSONDataSource* poDS = NULL;
-    poDS = new OGRGeoJSONDataSource();
+    OGRGeoJSONDataSource* poDS
+        = new OGRGeoJSONDataSource();
 
 /* -------------------------------------------------------------------- */
 /*      Processing configuration options.                               */

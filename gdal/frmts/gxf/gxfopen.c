@@ -130,6 +130,7 @@ static char **GXFReadHeaderValue( FILE * fp, char * pszHTitle )
             if( pszTmp == NULL )
             {
                 CSLDestroy(papszReturn);
+                CPLFree(pszTrimmedLine);
                 return NULL;
             }
             strcpy(pszTmp, papszReturn[nReturnLineCount-1]);
@@ -323,6 +324,8 @@ GXFHandle GXFOpen( const char * pszFilename )
         nHeaderCount ++;
     }
 
+    CSLDestroy( papszList );
+
 /* -------------------------------------------------------------------- */
 /*      Did we find the #GRID?                                          */
 /* -------------------------------------------------------------------- */
@@ -333,7 +336,7 @@ GXFHandle GXFOpen( const char * pszFilename )
                   "Didn't parse through to #GRID successfully in.\n"
                   "file `%s'.\n",
                   pszFilename );
-        
+
         return NULL;
     }
 
@@ -367,7 +370,7 @@ GXFHandle GXFOpen( const char * pszFilename )
         psGXF->dfZMaximum = (psGXF->dfZMaximum * psGXF->dfTransformScale)
             			+ psGXF->dfTransformOffset;
     }
-    
+
     return( (GXFHandle) psGXF );
 }
 
@@ -1028,5 +1031,3 @@ CPLErr GXFGetPosition( GXFHandle hGXF,
     else
         return( CE_None );
 }
-
-

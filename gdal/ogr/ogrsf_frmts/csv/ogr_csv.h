@@ -83,7 +83,7 @@ class OGRCSVLayer : public OGRLayer
     int                 bHiddenWKTColumn;
 
     /*http://www.faa.gov/airports/airport_safety/airportdata_5010/menu/index.cfm specific */
-    int                 iNfdcLatitudeS, iNfdcLongitudeS;
+    int                 iNfdcLongitudeS, iNfdcLatitudeS;
     int                 bDontHonourStrings;
 
     int                 iLongitudeField, iLatitudeField, iZField;
@@ -100,6 +100,8 @@ class OGRCSVLayer : public OGRLayer
     int                 bKeepGeomColumns;
     
     int                 bMergeDelimiter;
+    
+    int                 bEmptyStringNull;
     
     char              **GetNextLineTokens();
     

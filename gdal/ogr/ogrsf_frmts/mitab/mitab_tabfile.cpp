@@ -1191,7 +1191,7 @@ GIntBig TABFile::GetNextFeatureId(GIntBig nPrevId)
         ResetReading();
     m_bLastOpWasRead = TRUE;
 
-    if( (GIntBig)(int)nPrevId != nPrevId )
+    if( !CPL_INT64_FITS_ON_INT32(nPrevId) )
         return -1;
 
     /*-----------------------------------------------------------------
@@ -1671,7 +1671,7 @@ OGRErr TABFile::ISetFeature( OGRFeature *poFeature )
     {
         CPLError(CE_Failure, CPLE_NotSupported,
                  "SetFeature() cannot be used in read-only access.");
-        return -1;
+        return OGRERR_FAILURE;
     }
 
     /*-----------------------------------------------------------------

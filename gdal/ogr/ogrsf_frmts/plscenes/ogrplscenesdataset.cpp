@@ -60,7 +60,7 @@ OGRPLScenesDataset::~OGRPLScenesDataset()
     {
         char** papszOptions = NULL;
         papszOptions = CSLSetNameValue(papszOptions, "CLOSE_PERSISTENT", CPLSPrintf("PLSCENES:%p", this));
-        CPLHTTPFetch( osBaseURL, papszOptions);
+        CPLHTTPDestroyResult(CPLHTTPFetch(osBaseURL, papszOptions));
         CSLDestroy(papszOptions);
     }
 }
@@ -121,9 +121,9 @@ OGRLayer* OGRPLScenesDataset::ExecuteSQL( const char *pszSQLCommand,
             osSQLCommand.resize(nLimitPos);
 
         CPLPushErrorHandler(CPLQuietErrorHandler);
-        OGRErr eErr = oSelect.preparse(osSQLCommand);
+        CPLErr eErr = oSelect.preparse(osSQLCommand);
         CPLPopErrorHandler();
-        if( eErr != OGRERR_NONE )
+        if( eErr != CE_None )
             return GDALDataset::ExecuteSQL(pszSQLCommand, poSpatialFilter, pszDialect);
 
 /* -------------------------------------------------------------------- */
@@ -611,4 +611,3 @@ void RegisterOGRPLSCENES()
         GetGDALDriverManager()->RegisterDriver( poDriver );
     }
 }
-

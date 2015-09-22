@@ -395,7 +395,6 @@ retry:
     padfYRevert = padfXRevert + nSampleMax;
     padfZRevert = padfXRevert + nSampleMax * 2;
 
-
     // Take N_STEPS steps
     int iStep;
     for( iStep = 0; iStep <= nSteps; iStep ++ )
@@ -499,9 +498,9 @@ retry:
                     dfExpectedX   = nInXSize;
                     dfExpectedY   = dfRatio * nInYSize;
                 }
-                
-                if (fabs(padfXRevert[i] - dfExpectedX) > nInXSize / nSteps ||
-                    fabs(padfYRevert[i] - dfExpectedY) > nInYSize / nSteps)
+
+                if (fabs(padfXRevert[i] - dfExpectedX) > nInXSize / static_cast<double>(nSteps) ||
+                    fabs(padfYRevert[i] - dfExpectedY) > nInYSize / static_cast<double>(nSteps))
                     nFailedCount ++;
             }
             if( nFailedCount != 0 )
@@ -587,8 +586,8 @@ retry:
             double x_out_before = padfX[i-1];
             double x_out_after = padfX[i];
             int nIter = 0;
-            double x_in_before = (x_i - 1) * nInXSize * 1.0 / nSteps;
-            double x_in_after = x_i * nInXSize * 1.0 / nSteps;
+            double x_in_before = (double)(x_i - 1) * nInXSize / nSteps;
+            double x_in_after = (double)x_i * nInXSize / nSteps;
             int valid_before = pabSuccess[i-1];
             int valid_after = pabSuccess[i];
             
@@ -600,7 +599,7 @@ retry:
                      x_out_before * x_out_after < 0) && nIter < 16 )
             {
                 double x = (x_in_before + x_in_after) / 2;
-                double y = y_i * nInYSize * 1.0 / nSteps;
+                double y = (double)y_i * nInYSize / nSteps;
                 double z= 0;
                 //fprintf(stderr, "[%d] (%f, %f) -> ", nIter, x, y);
                 int bSuccess = TRUE;
@@ -2461,7 +2460,7 @@ GDALDeserializeReprojectionTransformer( CPLXMLNode *psTree )
 
 {
     const char *pszSourceSRS = CPLGetXMLValue( psTree, "SourceSRS", NULL );
-    const char *pszTargetSRS= CPLGetXMLValue( psTree, "TargetSRS", NULL );
+    const char *pszTargetSRS = CPLGetXMLValue( psTree, "TargetSRS", NULL );
     char *pszSourceWKT = NULL, *pszTargetWKT = NULL;
     void *pResult = NULL;
 
@@ -3433,6 +3432,7 @@ void *GDALCloneTransformer( void *pTransformArg )
             CE_None )
         {
             CPLDestroyXMLNode(pSerialized);
+            CPLFree(pClonedTransformArg);
             return NULL;
         }
         CPLDestroyXMLNode(pSerialized);

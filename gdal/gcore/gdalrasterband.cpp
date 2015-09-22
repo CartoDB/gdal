@@ -775,7 +775,7 @@ int GDALRasterBand::InitBlockInfo()
     nBlocksPerColumn = DIV_ROUND_UP(nRasterYSize, nBlockYSize);
 
     const char* pszBlockStrategy = CPLGetConfigOption("GDAL_BAND_BLOCK_CACHE", NULL);
-    int bUseArray = TRUE;
+    bool bUseArray = true;
     if( pszBlockStrategy == NULL )
     {
         if( poDS == NULL ||
@@ -787,11 +787,11 @@ int GDALRasterBand::InitBlockInfo()
         else if( (poDS->nOpenFlags & GDAL_OF_BLOCK_ACCESS_MASK) ==
                                             GDAL_OF_HASHSET_BLOCK_ACCESS )
         {
-            bUseArray = FALSE;
+            bUseArray = false;
         }
     }
     else if( EQUAL(pszBlockStrategy, "HASHSET") )
-        bUseArray = FALSE;
+        bUseArray = false;
     if( bUseArray )
         poBandBlockCache = GDALArrayBandBlockCacheCreate(this);
     else
@@ -3592,7 +3592,8 @@ GDALRasterBand::ComputeStatistics( int bApproxOK,
 /*      Read actual data and compute statistics.                        */
 /* -------------------------------------------------------------------- */
     double      dfMin = 0.0, dfMax = 0.0;
-    int         bGotNoDataValue, bFirstValue = TRUE;
+    int         bGotNoDataValue;
+    bool bFirstValue = true;
     /* Using Welford algorithm ( http://en.wikipedia.org/wiki/Algorithms_for_calculating_variance ) */
     /* to compute standard deviation in a more numerically robust way than */
     /* the difference of the sum of square values with the square of the sum */
@@ -3721,7 +3722,7 @@ GDALRasterBand::ComputeStatistics( int bApproxOK,
                 if( bFirstValue )
                 {
                     dfMin = dfMax = dfValue;
-                    bFirstValue = FALSE;
+                    bFirstValue = false;
                 }
                 else
                 {
@@ -3856,7 +3857,7 @@ GDALRasterBand::ComputeStatistics( int bApproxOK,
                     if( bFirstValue )
                     {
                         dfMin = dfMax = dfValue;
-                        bFirstValue = FALSE;
+                        bFirstValue = false;
                     }
                     else
                     {
@@ -3967,29 +3968,29 @@ CPLErr CPL_STDCALL GDALComputeRasterStatistics(
  * 
  * @param dfMax maximum pixel value.
  *
- * @param dfMean mean (average) of all pixel values.		
+ * @param dfMean mean (average) of all pixel values.
  *
  * @param dfStdDev Standard deviation of all pixel values.
  *
- * @return CE_None on success or CE_Failure on failure. 
+ * @return CE_None on success or CE_Failure on failure.
  */
 
-CPLErr GDALRasterBand::SetStatistics( double dfMin, double dfMax, 
+CPLErr GDALRasterBand::SetStatistics( double dfMin, double dfMax,
                                       double dfMean, double dfStdDev )
 
 {
     char szValue[128] = { 0 };
 
-    CPLsprintf( szValue, "%.14g", dfMin );
+    CPLsnprintf( szValue, sizeof(szValue), "%.14g", dfMin );
     SetMetadataItem( "STATISTICS_MINIMUM", szValue );
 
-    CPLsprintf( szValue, "%.14g", dfMax );
+    CPLsnprintf( szValue, sizeof(szValue), "%.14g", dfMax );
     SetMetadataItem( "STATISTICS_MAXIMUM", szValue );
 
-    CPLsprintf( szValue, "%.14g", dfMean );
+    CPLsnprintf( szValue, sizeof(szValue), "%.14g", dfMean );
     SetMetadataItem( "STATISTICS_MEAN", szValue );
 
-    CPLsprintf( szValue, "%.14g", dfStdDev );
+    CPLsnprintf( szValue, sizeof(szValue), "%.14g", dfStdDev );
     SetMetadataItem( "STATISTICS_STDDEV", szValue );
 
     return CE_None;
@@ -4081,7 +4082,8 @@ CPLErr GDALRasterBand::ComputeRasterMinMax( int bApproxOK,
 /* -------------------------------------------------------------------- */
 /*      Read actual data and compute minimum and maximum.               */
 /* -------------------------------------------------------------------- */
-    int     bGotNoDataValue, bFirstValue = TRUE;
+    int bGotNoDataValue;
+    bool bFirstValue = true;
 
     const double dfNoDataValue = GetNoDataValue( &bGotNoDataValue );
     bGotNoDataValue = bGotNoDataValue && !CPLIsNan(dfNoDataValue);
@@ -4197,7 +4199,7 @@ CPLErr GDALRasterBand::ComputeRasterMinMax( int bApproxOK,
                 if( bFirstValue )
                 {
                     dfMin = dfMax = dfValue;
-                    bFirstValue = FALSE;
+                    bFirstValue = false;
                 }
                 else
                 {
@@ -4327,7 +4329,7 @@ CPLErr GDALRasterBand::ComputeRasterMinMax( int bApproxOK,
                     if( bFirstValue )
                     {
                         dfMin = dfMax = dfValue;
-                        bFirstValue = FALSE;
+                        bFirstValue = false;
                     }
                     else
                     {
@@ -4958,9 +4960,11 @@ unsigned char* GDALRasterBand::GetIndexColorTranslationTo(GDALRasterBand* poRefe
             int nEntries = srcColorTable->GetColorEntryCount();
             int nRefEntries = destColorTable->GetColorEntryCount();
             int bHasNoDataValueSrc;
-            int noDataValueSrc = (int)GetNoDataValue(&bHasNoDataValueSrc);
+            double dfNoDataValueSrc = GetNoDataValue(&bHasNoDataValueSrc);
+            int noDataValueSrc = (bHasNoDataValueSrc) ? (int)dfNoDataValueSrc : 0;
             int bHasNoDataValueRef;
-            int noDataValueRef = (int)poReferenceBand->GetNoDataValue(&bHasNoDataValueRef);
+            double dfNoDataValueRef = poReferenceBand->GetNoDataValue(&bHasNoDataValueRef);
+            int noDataValueRef = (bHasNoDataValueRef) ? (int)dfNoDataValueRef : 0;
             int samePalette;
             int i, j;
 
@@ -5086,7 +5090,7 @@ void GDALRasterBand::SetFlushBlockErr( CPLErr eErr )
  * @since GDAL 1.9.0
  */
 
-void GDALRasterBand::ReportError(CPLErr eErrClass, int err_no, const char *fmt, ...)
+void GDALRasterBand::ReportError(CPLErr eErrClass, CPLErrorNum err_no, const char *fmt, ...)
 {
     va_list args;
 

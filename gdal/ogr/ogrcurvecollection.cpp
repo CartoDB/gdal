@@ -64,7 +64,7 @@ OGRCurveCollection::OGRCurveCollection( const OGRCurveCollection& other ) :
     if( other.nCurveCount > 0 )
     {
         nCurveCount = other.nCurveCount;
-        papoCurves = (OGRCurve **) VSIMalloc2(sizeof(void*), nCurveCount);
+        papoCurves = (OGRCurve **) VSICalloc(sizeof(void*), nCurveCount);
         
         if( papoCurves )
         {
@@ -184,17 +184,17 @@ OGRErr OGRCurveCollection::importPreambuleFromWkb( OGRGeometry* poGeom,
                                                         nMinSubGeomSize,
                                                         nCurveCount,
                                                         eWkbVariant );
-    if( eErr >= 0 )
+    if( eErr != OGRERR_NONE )
         return eErr;
 
-    papoCurves = (OGRCurve **) VSIMalloc2(sizeof(void*), nCurveCount);
+    papoCurves = (OGRCurve **) VSICalloc(sizeof(void*), nCurveCount);
     if (nCurveCount != 0 && papoCurves == NULL)
     {
         nCurveCount = 0;
         return OGRERR_NOT_ENOUGH_MEMORY;
     }
 
-    return -1;
+    return OGRERR_NONE;
 }
 
 /************************************************************************/
@@ -465,7 +465,7 @@ void OGRCurveCollection::getEnvelope( OGREnvelope * psEnvelope ) const
 void OGRCurveCollection::getEnvelope( OGREnvelope3D * psEnvelope ) const
 {
     OGREnvelope3D       oGeomEnv;
-    int                 bExtentSet = FALSE;
+    bool                bExtentSet = false;
 
     for( int iGeom = 0; iGeom < nCurveCount; iGeom++ )
     {
@@ -474,7 +474,7 @@ void OGRCurveCollection::getEnvelope( OGREnvelope3D * psEnvelope ) const
             if (!bExtentSet)
             {
                 papoCurves[iGeom]->getEnvelope( psEnvelope );
-                bExtentSet = TRUE;
+                bExtentSet = true;
             }
             else
             {

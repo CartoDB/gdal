@@ -32,6 +32,10 @@
 #include "cpl_string.h"
 #include "ogr_spatialref.h"
 
+#include <algorithm>
+
+using std::fill;
+
 CPL_CVSID("$Id$");
 
 CPL_C_START
@@ -47,13 +51,13 @@ typedef struct {
     GInt32	LE;	/* last element (pixel) */
     GInt32	NC;	/* number of channels (bands) */
     GInt32	H4322;	/* header record identifier - always 4322. */
-    char        unused1[40]; 
+    char        unused1[40];
     GByte	IH19[4];/* data type, and size flags */
     GInt32	IH20;	/* number of secondary headers */
-    GInt32	SRID;	
+    GInt32	SRID;
     char        unused2[12];
     double      YOffset;
-    double      XOffset; 
+    double      XOffset;
     double      YPixSize;
     double      XPixSize;
     double      Matrix[4];
@@ -104,10 +108,47 @@ class DIPExDataset : public GDALPamDataset
 /*                            DIPExDataset()                             */
 /************************************************************************/
 
-DIPExDataset::DIPExDataset()
 
+DIPExDataset::DIPExDataset() :
+    fp(NULL),
+    eRasterDataType(GDT_Unknown)
 {
-    fp = NULL;
+    sHeader.NBIH = 0;
+    sHeader.NBPR = 0;
+    sHeader.IL = 0;
+    sHeader.LL = 0;
+    sHeader.IE = 0;
+    sHeader.LE = 0;
+    sHeader.NC = 0;
+    sHeader.H4322 = 0;
+    fill( sHeader.unused1,
+          sHeader.unused1 + CPL_ARRAYSIZE(sHeader.unused1),
+          0 );
+    fill( sHeader.IH19,
+          sHeader.IH19 + CPL_ARRAYSIZE(sHeader.IH19),
+          0 );
+    sHeader.IH20 = 0;
+    sHeader.SRID = 0;
+    fill( sHeader.unused2,
+          sHeader.unused2 + CPL_ARRAYSIZE(sHeader.unused2),
+          0 );
+    sHeader.YOffset = 0.0;
+    sHeader.XOffset = 0.0;
+    sHeader.YPixSize = 0.0;
+    sHeader.XPixSize = 0.0;
+    sHeader.Matrix[0] = 0.0;
+    sHeader.Matrix[1] = 0.0;
+    sHeader.Matrix[2] = 0.0;
+    sHeader.Matrix[3] = 0.0;
+    fill( sHeader.unused3,
+          sHeader.unused3 + CPL_ARRAYSIZE(sHeader.unused3),
+          0 );
+    fill( sHeader.ColorTable,
+          sHeader.ColorTable + CPL_ARRAYSIZE(sHeader.ColorTable),
+          0 );
+    fill( sHeader.unused4,
+          sHeader.unused4 + CPL_ARRAYSIZE(sHeader.unused4),
+          0 );
 
     adfGeoTransform[0] = 0.0;
     adfGeoTransform[1] = 1.0;

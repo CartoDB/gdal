@@ -99,6 +99,9 @@ public:
                                  const char * pszDomain = "" );
 
     void        Clear();
+
+  private:
+    CPL_DISALLOW_COPY_ASSIGN(GDALMultiDomainMetadata);
 };
 
 /* ******************************************************************** */
@@ -213,6 +216,9 @@ class CPL_DLL GDALDefaultOverviews
                              const char *pszBasename = NULL );
 
     char**     GetSiblingFiles() { return papszInitSiblingFiles; }
+
+  private:
+    CPL_DISALLOW_COPY_ASSIGN(GDALDefaultOverviews);
 };
 
 /* ******************************************************************** */
@@ -248,6 +254,9 @@ class CPL_DLL GDALOpenInfo
 
     int         TryToIngest(int nBytes);
     char      **GetSiblingFiles();
+
+  private:
+    CPL_DISALLOW_COPY_ASSIGN(GDALOpenInfo);
 };
 
 /* ******************************************************************** */
@@ -460,7 +469,7 @@ class CPL_DLL GDALDataset : public GDALMajorObject
     CPLErr BuildOverviews( const char *, int, int *,
                            int, int *, GDALProgressFunc, void * );
 
-    void ReportError(CPLErr eErrClass, int err_no, const char *fmt, ...)  CPL_PRINT_FUNC_FORMAT (4, 5);
+    void ReportError(CPLErr eErrClass, CPLErrorNum err_no, const char *fmt, ...)  CPL_PRINT_FUNC_FORMAT (4, 5);
 
 private:
     CPLMutex        *m_hMutex;
@@ -532,6 +541,9 @@ private:
     OGRErr              ProcessSQLAlterTableRenameColumn( const char * );
 
     OGRStyleTable      *m_poStyleTable;
+
+  private:
+    CPL_DISALLOW_COPY_ASSIGN(GDALDataset);
 };
 
 /* ******************************************************************** */
@@ -615,6 +627,9 @@ class CPL_DLL GDALRasterBlock
 
     /* Should only be called by GDALDestroyDriverManager() */
     static void DestroyRBMutex();
+
+  private:
+    CPL_DISALLOW_COPY_ASSIGN(GDALRasterBlock);
 };
 
 /* ******************************************************************** */
@@ -884,7 +899,10 @@ class CPL_DLL GDALRasterBand : public GDALMajorObject
                                                GIntBig *pnLineSpace,
                                                char **papszOptions );
 
-    void ReportError(CPLErr eErrClass, int err_no, const char *fmt, ...)  CPL_PRINT_FUNC_FORMAT (4, 5);
+    void ReportError(CPLErr eErrClass, CPLErrorNum err_no, const char *fmt, ...)  CPL_PRINT_FUNC_FORMAT (4, 5);
+
+private:
+    CPL_DISALLOW_COPY_ASSIGN(GDALRasterBand);
 };
 
 /* ******************************************************************** */
@@ -1062,6 +1080,8 @@ class CPL_DLL GDALDriver : public GDALMajorObject
                                        const char * pszOldName );
     CPLErr              DefaultCopyFiles( const char * pszNewName,
                                           const char * pszOldName );
+private:
+    CPL_DISALLOW_COPY_ASSIGN(GDALDriver);
 };
 
 /* ******************************************************************** */

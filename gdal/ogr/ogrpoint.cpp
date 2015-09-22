@@ -267,7 +267,7 @@ OGRErr OGRPoint::importFromWkb( unsigned char * pabyData,
     OGRBoolean          bIs3D = FALSE;
 
     OGRErr eErr = importPreambuleFromWkb( pabyData, nSize, eByteOrder, bIs3D, eWkbVariant );
-    if( eErr >= 0 )
+    if( eErr != OGRERR_NONE )
         return eErr;
 
     if ( nSize < ((bIs3D) ? 29 : 21) && nSize != -1 )
@@ -385,13 +385,14 @@ OGRErr OGRPoint::importFromWkt( char ** ppszInput )
 
 {
     int bHasZ = FALSE, bHasM = FALSE;
-    OGRErr      eErr = importPreambuleFromWkt(ppszInput, &bHasZ, &bHasM);
-    if( eErr >= 0 )
-    {
-        if( eErr == OGRERR_NONE ) /* only the case for an EMPTY case */
-            nCoordDimension = (bHasZ) ? -3 : -2;
-
+    bool bIsEmpty = false;
+    OGRErr      eErr = importPreambuleFromWkt(ppszInput, &bHasZ, &bHasM, &bIsEmpty);
+    if( eErr != OGRERR_NONE )
         return eErr;
+    if( bIsEmpty )
+    {
+        nCoordDimension = (bHasZ) ? -3 : -2;
+        return OGRERR_NONE;
     }
 
     const char  *pszInput = *ppszInput;
@@ -565,19 +566,20 @@ void OGRPoint::getEnvelope( OGREnvelope3D * psEnvelope ) const
 OGRBoolean OGRPoint::Equals( OGRGeometry * poOther ) const
 
 {
-    OGRPoint    *poOPoint = (OGRPoint *) poOther;
-    
-    if( poOPoint== this )
+    if( poOther== this )
         return TRUE;
     
     if( poOther->getGeometryType() != getGeometryType() )
         return FALSE;
 
-    if ( IsEmpty() && poOther->IsEmpty() )
+    OGRPoint    *poOPoint = (OGRPoint *) poOther;
+    if ( nCoordDimension != poOPoint->nCoordDimension )
+        return FALSE;
+    
+    if ( IsEmpty() )
         return TRUE;
 
     // we should eventually test the SRS.
-    
     if( poOPoint->getX() != getX()
         || poOPoint->getY() != getY()
         || poOPoint->getZ() != getZ() )

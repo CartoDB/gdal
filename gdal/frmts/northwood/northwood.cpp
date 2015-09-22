@@ -387,9 +387,9 @@ void createIP( int index, unsigned char r, unsigned char g, unsigned char b,
     float bslope = (float)(b - map[wm].b) / (float)(index - wm);
     for( i = wm + 1; i < index; i++)
     {
-        map[i].r = map[wm].r + (unsigned char)(((i - wm) * rslope) + 0.5);
-        map[i].g = map[wm].g + (unsigned char)(((i - wm) * gslope) + 0.5);
-        map[i].b = map[wm].b + (unsigned char)(((i - wm) * bslope) + 0.5);
+        map[i].r = (unsigned char)(map[wm].r + ((i - wm) * rslope) + 0.5);
+        map[i].g = (unsigned char)(map[wm].g + ((i - wm) * gslope) + 0.5);
+        map[i].b = (unsigned char)(map[wm].b + ((i - wm) * bslope) + 0.5);
     }
     map[index].r = r;
     map[index].g = g;
@@ -453,7 +453,8 @@ NWT_GRID *nwtOpenGrid( char *filename )
         return NULL;
     }
 
-    strcpy( pGrd->szFileName, filename );
+    strncpy( pGrd->szFileName, filename, sizeof(pGrd->szFileName) );
+    pGrd->szFileName[sizeof(pGrd->szFileName) - 1] = '\0';
     pGrd->fp = fp;
     nwt_ParseHeader( pGrd, nwtHeader );
 
@@ -463,11 +464,9 @@ NWT_GRID *nwtOpenGrid( char *filename )
 //close the file and free the mem
 void nwtCloseGrid( NWT_GRID * pGrd )
 {
-    unsigned short usTmp;
-
     if( (pGrd->cFormat & 0x80) && pGrd->stClassDict )        // if is GRC - free the Dictionary
     {
-        for( usTmp = 0; usTmp < pGrd->stClassDict->nNumClassifiedItems; usTmp++ )
+        for( unsigned short usTmp = 0; usTmp < pGrd->stClassDict->nNumClassifiedItems; usTmp++ )
         {
             free( pGrd->stClassDict->stClassifedItem[usTmp] );
         }
@@ -486,8 +485,6 @@ void nwtGetRow( CPL_UNUSED NWT_GRID * pGrd )
 
 void nwtPrintGridHeader( NWT_GRID * pGrd )
 {
-    int i;
-
     if( pGrd->cFormat & 0x80 )
     {
         printf( "\n%s\n\nGrid type is Classified ", pGrd->szFileName );
@@ -537,7 +534,7 @@ void nwtPrintGridHeader( NWT_GRID * pGrd )
         if( pGrd->bShowHillShade )
             printf( " Hill Shading" );
 
-        for( i = 0; i < pGrd->iNumColorInflections; i++ )
+        for( int i = 0; i < pGrd->iNumColorInflections; i++ )
         {
             printf( "\nColor Inflection %d - %f (%d,%d,%d)", i + 1,
                     pGrd->stInflection[i].zVal, pGrd->stInflection[i].r,
@@ -558,7 +555,7 @@ void nwtPrintGridHeader( NWT_GRID * pGrd )
     {
         printf( "\nNumber of Classes defined = %d",
                 pGrd->stClassDict->nNumClassifiedItems );
-        for( i = 0; i < (int) pGrd->stClassDict->nNumClassifiedItems; i++ )
+        for( int i = 0; i < (int) pGrd->stClassDict->nNumClassifiedItems; i++ )
         {
             printf( "\n%s - (%d,%d,%d)  Raw = %d  %d %d",
                     pGrd->stClassDict->stClassifedItem[i]->szClassName,
@@ -574,20 +571,18 @@ void nwtPrintGridHeader( NWT_GRID * pGrd )
 
 HLS RGBtoHLS( NWT_RGB rgb )
 {
-    short R, G, B;                /* input RGB values */
-    HLS hls;
-    unsigned char cMax, cMin;        /* max and min RGB values */
-    short Rdelta, Gdelta, Bdelta;    /* intermediate value: % of spread from max */
     /* get R, G, and B out of DWORD */
-    R = rgb.r;
-    G = rgb.g;
-    B = rgb.b;
+    short R = rgb.r;
+    short G = rgb.g;
+    short B = rgb.b;
 
     /* calculate lightness */
-    cMax = (unsigned char) MAX( MAX(R,G), B );
-    cMin = (unsigned char) MIN( MIN(R,G), B );
+    unsigned char cMax = (unsigned char) MAX( MAX(R,G), B );
+    unsigned char cMin = (unsigned char) MIN( MIN(R,G), B );
+    HLS hls;
     hls.l = (((cMax + cMin) * HLSMAX) + RGBMAX) / (2 * RGBMAX);
 
+    short Rdelta, Gdelta, Bdelta;    /* intermediate value: % of spread from max */
     if( cMax == cMin )
     {                            /* r=g=b --> achromatic case */
         hls.s = 0;                /* saturation */
@@ -653,7 +648,6 @@ short HueToRGB( short n1, short n2, short hue )
 NWT_RGB HLStoRGB( HLS hls )
 {
     NWT_RGB rgb;
-    short Magic1, Magic2;            /* calculated magic numbers (really!) */
 
     if( hls.s == 0 )
     {                            /* achromatic case */
@@ -666,6 +660,7 @@ NWT_RGB HLStoRGB( HLS hls )
     else
     {                            /* chromatic case */
         /* set up magic numbers */
+        short Magic1, Magic2;            /* calculated magic numbers (really!) */
         if( hls.l <= (HLSMAX / 2) )
             Magic2 = (hls.l * (HLSMAX + hls.s) + (HLSMAX / 2)) / HLSMAX;
         else

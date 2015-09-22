@@ -635,7 +635,7 @@ CPLErr VRTSourcedRasterBand::GetHistogram( double dfMin, double dfMax,
 
 {
     if( nSources != 1 )
-        return GDALRasterBand::GetHistogram( dfMin, dfMax,
+        return VRTRasterBand::GetHistogram( dfMin, dfMax,
                                              nBuckets, panHistogram,
                                              bIncludeOutOfRange, bApproxOK,
                                              pfnProgress, pProgressData );
@@ -689,6 +689,8 @@ CPLErr VRTSourcedRasterBand::GetHistogram( double dfMin, double dfMax,
     }
 
     nRecursionCounter --;
+    
+    SetDefaultHistogram( dfMin, dfMax, nBuckets, panHistogram );
 
     return CE_None;
 }
@@ -838,42 +840,42 @@ CPLXMLNode *VRTSourcedRasterBand::SerializeToXML( const char *pszVRTPath )
 void VRTSourcedRasterBand::ConfigureSource(VRTSimpleSource *poSimpleSource,
                                            GDALRasterBand *poSrcBand,
                                            int bAddAsMaskBand,
-                                           int nSrcXOff, int nSrcYOff,
-                                           int nSrcXSize, int nSrcYSize,
-                                           int nDstXOff, int nDstYOff,
-                                           int nDstXSize, int nDstYSize)
+                                           double dfSrcXOff, double dfSrcYOff,
+                                           double dfSrcXSize, double dfSrcYSize,
+                                           double dfDstXOff, double dfDstYOff,
+                                           double dfDstXSize, double dfDstYSize)
 {
 /* -------------------------------------------------------------------- */
 /*      Default source and dest rectangles.                             */
 /* -------------------------------------------------------------------- */
-    if( nSrcYSize == -1 )
+    if( dfSrcYSize == -1 )
     {
-        nSrcXOff = 0;
-        nSrcYOff = 0;
-        nSrcXSize = poSrcBand->GetXSize();
-        nSrcYSize = poSrcBand->GetYSize();
+        dfSrcXOff = 0;
+        dfSrcYOff = 0;
+        dfSrcXSize = poSrcBand->GetXSize();
+        dfSrcYSize = poSrcBand->GetYSize();
     }
 
-    if( nDstYSize == -1 )
+    if( dfDstYSize == -1 )
     {
-        nDstXOff = 0;
-        nDstYOff = 0;
-        nDstXSize = nRasterXSize;
-        nDstYSize = nRasterYSize;
+        dfDstXOff = 0;
+        dfDstYOff = 0;
+        dfDstXSize = nRasterXSize;
+        dfDstYSize = nRasterYSize;
     }
 
     if( bAddAsMaskBand )
         poSimpleSource->SetSrcMaskBand( poSrcBand );
     else
         poSimpleSource->SetSrcBand( poSrcBand );
-    poSimpleSource->SetSrcWindow( nSrcXOff, nSrcYOff, nSrcXSize, nSrcYSize );
-    poSimpleSource->SetDstWindow( nDstXOff, nDstYOff, nDstXSize, nDstYSize );
+    poSimpleSource->SetSrcWindow( dfSrcXOff, dfSrcYOff, dfSrcXSize, dfSrcYSize );
+    poSimpleSource->SetDstWindow( dfDstXOff, dfDstYOff, dfDstXSize, dfDstYSize );
 
 /* -------------------------------------------------------------------- */
 /*      Default source and dest rectangles.                             */
 /* -------------------------------------------------------------------- */
-    if ( nSrcXOff == nDstXOff && nSrcYOff == nDstYOff &&
-         nSrcXSize == nDstXSize && nSrcYSize == nRasterYSize )
+    if ( dfSrcXOff == dfDstXOff && dfSrcYOff == dfDstYOff &&
+         dfSrcXSize == dfDstXSize && dfSrcYSize == nRasterYSize )
         bEqualAreas = TRUE;
 
 /* -------------------------------------------------------------------- */
@@ -889,10 +891,10 @@ void VRTSourcedRasterBand::ConfigureSource(VRTSimpleSource *poSimpleSource,
 /************************************************************************/
 
 CPLErr VRTSourcedRasterBand::AddSimpleSource( GDALRasterBand *poSrcBand, 
-                                       int nSrcXOff, int nSrcYOff, 
-                                       int nSrcXSize, int nSrcYSize, 
-                                       int nDstXOff, int nDstYOff, 
-                                       int nDstXSize, int nDstYSize,
+                                       double dfSrcXOff, double dfSrcYOff, 
+                                       double dfSrcXSize, double dfSrcYSize, 
+                                       double dfDstXOff, double dfDstYOff, 
+                                       double dfDstXSize, double dfDstYSize,
                                        const char *pszResampling, 
                                        double dfNoDataValue )
 
@@ -917,10 +919,10 @@ CPLErr VRTSourcedRasterBand::AddSimpleSource( GDALRasterBand *poSrcBand,
     ConfigureSource(poSimpleSource,
                     poSrcBand,
                     FALSE,
-                    nSrcXOff, nSrcYOff,
-                    nSrcXSize, nSrcYSize,
-                    nDstXOff, nDstYOff,
-                    nDstXSize, nDstYSize);
+                    dfSrcXOff, dfSrcYOff,
+                    dfSrcXSize, dfSrcYSize,
+                    dfDstXOff, dfDstYOff,
+                    dfDstXSize, dfDstYSize);
 
     if( dfNoDataValue != VRT_NODATA_UNSET )
         poSimpleSource->SetNoDataValue( dfNoDataValue );
@@ -937,10 +939,10 @@ CPLErr VRTSourcedRasterBand::AddSimpleSource( GDALRasterBand *poSrcBand,
 
 /* poSrcBand is not the mask band, but the band from which the mask band is taken */
 CPLErr VRTSourcedRasterBand::AddMaskBandSource( GDALRasterBand *poSrcBand,
-                                                int nSrcXOff, int nSrcYOff,
-                                                int nSrcXSize, int nSrcYSize,
-                                                int nDstXOff, int nDstYOff,
-                                                int nDstXSize, int nDstYSize )
+                                                double dfSrcXOff, double dfSrcYOff,
+                                                double dfSrcXSize, double dfSrcYSize,
+                                                double dfDstXOff, double dfDstYOff,
+                                                double dfDstXSize, double dfDstYSize )
 {
 /* -------------------------------------------------------------------- */
 /*      Create source.                                                  */
@@ -950,10 +952,10 @@ CPLErr VRTSourcedRasterBand::AddMaskBandSource( GDALRasterBand *poSrcBand,
     ConfigureSource(poSimpleSource,
                     poSrcBand,
                     TRUE,
-                    nSrcXOff, nSrcYOff,
-                    nSrcXSize, nSrcYSize,
-                    nDstXOff, nDstYOff,
-                    nDstXSize, nDstYSize);
+                    dfSrcXOff, dfSrcYOff,
+                    dfSrcXSize, dfSrcYSize,
+                    dfDstXOff, dfDstYOff,
+                    dfDstXSize, dfDstYSize);
 
 /* -------------------------------------------------------------------- */
 /*      add to list.                                                    */
@@ -994,10 +996,10 @@ CPLErr CPL_STDCALL VRTAddSimpleSource( VRTSourcedRasterBandH hVRTBand,
 /************************************************************************/
 
 CPLErr VRTSourcedRasterBand::AddComplexSource( GDALRasterBand *poSrcBand, 
-                                               int nSrcXOff, int nSrcYOff, 
-                                               int nSrcXSize, int nSrcYSize, 
-                                               int nDstXOff, int nDstYOff, 
-                                               int nDstXSize, int nDstYSize,
+                                               double dfSrcXOff, double dfSrcYOff, 
+                                               double dfSrcXSize, double dfSrcYSize, 
+                                               double dfDstXOff, double dfDstYOff, 
+                                               double dfDstXSize, double dfDstYSize,
                                                double dfScaleOff,
                                                double dfScaleRatio,
                                                double dfNoDataValue,
@@ -1014,10 +1016,10 @@ CPLErr VRTSourcedRasterBand::AddComplexSource( GDALRasterBand *poSrcBand,
     ConfigureSource(poSource,
                     poSrcBand,
                     FALSE,
-                    nSrcXOff, nSrcYOff,
-                    nSrcXSize, nSrcYSize,
-                    nDstXOff, nDstYOff,
-                    nDstXSize, nDstYSize);
+                    dfSrcXOff, dfSrcYOff,
+                    dfSrcXSize, dfSrcYSize,
+                    dfDstXOff, dfDstYOff,
+                    dfDstXSize, dfDstYSize);
 
 /* -------------------------------------------------------------------- */
 /*      Set complex parameters.                                         */

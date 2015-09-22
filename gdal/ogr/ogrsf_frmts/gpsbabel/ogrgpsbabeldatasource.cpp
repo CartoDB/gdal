@@ -41,14 +41,17 @@ CPL_CVSID("$Id$");
 /*                      OGRGPSBabelDataSource()                         */
 /************************************************************************/
 
-OGRGPSBabelDataSource::OGRGPSBabelDataSource()
-
+OGRGPSBabelDataSource::OGRGPSBabelDataSource() :
+    nLayers(0),
+    pszName(NULL),
+    pszGPSBabelDriverName(NULL),
+    pszFilename(NULL),
+    poGPXDS(NULL)
 {
-    nLayers = 0;
-    pszName = NULL;
-    pszGPSBabelDriverName = NULL;
-    pszFilename = NULL;
-    poGPXDS = NULL;
+  for(int i=0; i<5; ++i)
+  {
+    apoLayers[i] = NULL;
+  }
 }
 
 /************************************************************************/
@@ -292,7 +295,7 @@ int OGRGPSBabelDataSource::Open( const char * pszDatasourceName,
         argv = NULL;
 
         CPLErr nLastErrorType = CPLGetLastErrorType();
-        int nLastErrorNo = CPLGetLastErrorNo();
+        CPLErrorNum nLastErrorNo = CPLGetLastErrorNo();
         CPLString osLastErrorMsg = CPLGetLastErrorMsg();
 
         VSIFCloseL(tmpfp);

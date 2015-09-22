@@ -297,6 +297,8 @@ class OGRMSSQLSpatialSelectLayer : public OGRMSSQLSpatialLayer
     virtual OGRFeature *GetFeature( GIntBig nFeatureId );
     
     virtual OGRErr      GetExtent(OGREnvelope *psExtent, int bForce = TRUE);
+    virtual OGRErr      GetExtent(int iGeomField, OGREnvelope *psExtent, int bForce)
+                { return OGRLayer::GetExtent(iGeomField, psExtent, bForce); }
 
     virtual int         TestCapability( const char * );
 };
@@ -352,7 +354,7 @@ class OGRMSSQLSpatialDataSource : public OGRDataSource
     int                 GetGeometryFormat() { return nGeometryFormat; }
     int                 UseGeometryColumns() { return bUseGeometryColumns; }
 
-    virtual int         DeleteLayer( int iLayer );
+    virtual OGRErr       DeleteLayer( int iLayer );
     virtual OGRLayer    *ICreateLayer( const char *,
                                       OGRSpatialReference * = NULL,
                                       OGRwkbGeometryType = wkbUnknown,

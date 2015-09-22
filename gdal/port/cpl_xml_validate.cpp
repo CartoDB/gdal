@@ -78,7 +78,7 @@ static void CPLFixPath(char* pszPath)
             pszPath[i] = '/';
     }
 
-    while(TRUE)
+    while(true)
     {
         char* pszSlashDotDot = strstr(pszPath, "/../");
         if (pszSlashDotDot == NULL || pszSlashDotDot == pszPath)
@@ -336,11 +336,6 @@ static
 CPLXMLNode* CPLLoadSchemaStrInternal(CPLHashSet* hSetSchemas,
                                      const char* pszFile)
 {
-    CPLXMLNode* psXML;
-    CPLXMLNode* psSchema;
-    CPLXMLNode* psPrev;
-    CPLXMLNode* psIter;
-
     if (CPLHashSetLookup(hSetSchemas, pszFile))
         return NULL;
 
@@ -348,7 +343,7 @@ CPLXMLNode* CPLLoadSchemaStrInternal(CPLHashSet* hSetSchemas,
 
     CPLDebug("CPL", "Parsing %s", pszFile);
 
-    psXML = CPLParseXMLFile(pszFile);
+    CPLXMLNode* psXML = CPLParseXMLFile(pszFile);
     if (psXML == NULL)
     {
         CPLError(CE_Failure, CPLE_AppDefined,
@@ -356,7 +351,7 @@ CPLXMLNode* CPLLoadSchemaStrInternal(CPLHashSet* hSetSchemas,
         return NULL;
     }
 
-    psSchema = CPLGetXMLNode(psXML, "=schema");
+    CPLXMLNode* psSchema = CPLGetXMLNode(psXML, "=schema");
     if (psSchema == NULL)
         psSchema = CPLGetXMLNode(psXML, "=xs:schema");
     if (psSchema == NULL)
@@ -369,11 +364,11 @@ CPLXMLNode* CPLLoadSchemaStrInternal(CPLHashSet* hSetSchemas,
         return NULL;
     }
 
-    psPrev = NULL;
-    psIter = psSchema->psChild;
+    CPLXMLNode* psPrev = NULL;
+    CPLXMLNode* psIter = psSchema->psChild;
     while(psIter)
     {
-        int bDestroyCurrentNode = FALSE;
+        bool bDestroyCurrentNode = false;
 
 #ifdef HAS_VALIDATION_BUG
         if (bHasLibXMLBug)
@@ -444,7 +439,7 @@ CPLXMLNode* CPLLoadSchemaStrInternal(CPLHashSet* hSetSchemas,
             {
                 /* We have already included that file, */
                 /* so just remove the <include/> node */
-                bDestroyCurrentNode = TRUE;
+                bDestroyCurrentNode = true;
             }
         }
 
@@ -504,11 +499,7 @@ CPLXMLNode* CPLLoadSchemaStrInternal(CPLHashSet* hSetSchemas,
 static
 void CPLMoveImportAtBeginning(CPLXMLNode* psXML)
 {
-    CPLXMLNode* psIter;
-    CPLXMLNode* psPrev;
-    CPLXMLNode* psSchema;
-
-    psSchema = CPLGetXMLNode(psXML, "=schema");
+    CPLXMLNode* psSchema = CPLGetXMLNode(psXML, "=schema");
     if (psSchema == NULL)
         psSchema = CPLGetXMLNode(psXML, "=xs:schema");
     if (psSchema == NULL)
@@ -516,8 +507,8 @@ void CPLMoveImportAtBeginning(CPLXMLNode* psXML)
     if (psSchema == NULL)
         return;
 
-    psPrev = NULL;
-    psIter = psSchema->psChild;
+    CPLXMLNode* psPrev = NULL;
+    CPLXMLNode* psIter = psSchema->psChild;
     while(psIter)
     {
         if (psPrev != NULL && psIter->eType == CXT_Element &&
@@ -550,8 +541,6 @@ void CPLMoveImportAtBeginning(CPLXMLNode* psXML)
 static
 char* CPLLoadSchemaStr(const char* pszXSDFilename)
 {
-    char* pszStr = NULL;
-
 #ifdef HAS_VALIDATION_BUG
     CPLHasLibXMLBug();
 #endif
@@ -560,6 +549,8 @@ char* CPLLoadSchemaStr(const char* pszXSDFilename)
         CPLHashSetNew(CPLHashSetHashStr, CPLHashSetEqualStr, CPLFree);
     CPLXMLNode* psSchema =
         CPLLoadSchemaStrInternal(hSetSchemas, pszXSDFilename);
+
+    char* pszStr = NULL;
     if (psSchema)
     {
         CPLMoveImportAtBeginning(psSchema);
@@ -585,10 +576,9 @@ static void CPLLibXMLInputStreamCPLFree(xmlChar* pszBuffer)
 
 static CPLString CPLFindLocalXSD(const char* pszXSDFilename)
 {
-    const char *pszSchemasOpenGIS;
     CPLString osTmp;
-
-    pszSchemasOpenGIS = CPLGetConfigOption("GDAL_OPENGIS_SCHEMAS", NULL);
+    const char *pszSchemasOpenGIS
+        = CPLGetConfigOption("GDAL_OPENGIS_SCHEMAS", NULL);
     if (pszSchemasOpenGIS != NULL)
     {
         int nLen = (int)strlen(pszSchemasOpenGIS);
@@ -681,7 +671,7 @@ xmlParserInputPtr CPLExternalEntityLoader (const char * URL,
 {
     //CPLDebug("CPL", "CPLExternalEntityLoader(%s)", URL);
     CPLString osURL;
-    
+
     /* Use libxml2 catalog mechanism to resolve the URL to something else */
     xmlChar* pszResolved = xmlCatalogResolveSystem((const xmlChar*)URL);
     if (pszResolved == NULL)
@@ -840,10 +830,9 @@ xmlParserInputPtr CPLExternalEntityLoader (const char * URL,
 static void CPLLibXMLWarningErrorCallback (void * ctx, const char * msg, ...)
 {
     va_list varg;
-    char * pszStr;
-
     va_start(varg, msg);
-    pszStr = (char *)va_arg( varg, char *);
+
+    char *pszStr = (char *)va_arg( varg, char *);
 
     if (strstr(pszStr, "since this namespace was already imported") == NULL)
     {
@@ -1085,7 +1074,7 @@ int CPLValidateXML(const char* pszXMLFilename,
                             CPLLibXMLWarningErrorCallback,
                             (void*) pszXMLFilename);
 
-    int bValid = FALSE;
+    bool bValid = false;
     if( pszXMLFilename[0] == '<' )
     {
         xmlDocPtr pDoc = xmlParseDoc((const xmlChar *)pszXMLFilename);

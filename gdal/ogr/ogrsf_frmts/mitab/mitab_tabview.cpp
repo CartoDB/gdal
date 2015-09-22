@@ -603,6 +603,7 @@ int TABView::ParseTABFile(const char *pszDatasetPath,
                     CPLError(CE_Failure, CPLE_NotSupported,
                      "WHERE clause in %s is not in a supported format: \"%s\"",
                              m_pszFname, m_papszTABFile[iLine]);
+                CSLDestroy(papszTok);
                 return -1;
             }
         }
@@ -879,7 +880,7 @@ TABFeature *TABView::GetFeatureRef(GIntBig nFeatureId)
         return NULL;
     }
 
-    if( (GIntBig)(int)nFeatureId != nFeatureId )
+    if( !CPL_INT64_FITS_ON_INT32(nFeatureId) )
         return NULL;
 
     if(m_poCurFeature)
@@ -1113,7 +1114,7 @@ OGRErr TABView::GetExtent (OGREnvelope *psExtent, int bForce)
     {
         CPLError(CE_Failure, CPLE_AppDefined,
              "GetExtent() can be called only after dataset has been opened.");
-        return -1;
+        return OGRERR_FAILURE;
     }
 
     return m_papoTABFiles[m_nMainTableIndex]->GetExtent(psExtent, bForce);

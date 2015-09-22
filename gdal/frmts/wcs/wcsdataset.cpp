@@ -447,13 +447,11 @@ GDALRasterBand *WCSRasterBand::GetOverview( int iOverview )
 /*                             WCSDataset()                             */
 /************************************************************************/
 
-WCSDataset::WCSDataset()
-
+WCSDataset::WCSDataset() :
+    bServiceDirty(FALSE), psService(NULL), papszSDSModifiers(NULL),
+    nVersion(0), pszProjection(NULL), pabySavedDataBuffer(NULL),
+    papszHttpOptions(NULL), nMaxCols(-1), nMaxRows(-1)
 {
-    psService = NULL;
-    bServiceDirty = FALSE;
-    pszProjection = NULL;
-    
     adfGeoTransform[0] = 0.0;
     adfGeoTransform[1] = 1.0;
     adfGeoTransform[2] = 0.0;
@@ -461,16 +459,8 @@ WCSDataset::WCSDataset()
     adfGeoTransform[4] = 0.0;
     adfGeoTransform[5] = 1.0;
 
-    pabySavedDataBuffer = NULL;
-    papszHttpOptions = NULL;
-
-    nMaxCols = -1;
-    nMaxRows = -1;
-
     apszCoverageOfferingMD[0] = NULL;
     apszCoverageOfferingMD[1] = NULL;
-
-    papszSDSModifiers = NULL;
 }
 
 /************************************************************************/
@@ -1389,9 +1379,11 @@ int WCSDataset::ExtractGridInfo()
         }
         else
         {
-            CPLError( CE_Failure, CPLE_AppDefined, 
+            CPLError( CE_Failure, CPLE_AppDefined,
                       "2dGridIn2dCrs does not have expected GridOrigin or\n"
                       "GridOffsets values - unable to process WCS coverage.");
+            CSLDestroy( papszOffsetTokens );
+            CSLDestroy( papszOriginTokens );
             return FALSE;
         }
     }
@@ -1410,13 +1402,15 @@ int WCSDataset::ExtractGridInfo()
         }
         else
         {
-            CPLError( CE_Failure, CPLE_AppDefined, 
+            CPLError( CE_Failure, CPLE_AppDefined,
                       "2dGridIn3dCrs does not have expected GridOrigin or\n"
                       "GridOffsets values - unable to process WCS coverage.");
+            CSLDestroy( papszOffsetTokens );
+            CSLDestroy( papszOriginTokens );
             return FALSE;
         }
     }
-    
+
     else if( strstr(pszGridType,":2dSimpleGrid") )
     {
         if( CSLCount(papszOffsetTokens) == 2
@@ -1431,19 +1425,23 @@ int WCSDataset::ExtractGridInfo()
         }
         else
         {
-            CPLError( CE_Failure, CPLE_AppDefined, 
+            CPLError( CE_Failure, CPLE_AppDefined,
                       "2dSimpleGrid does not have expected GridOrigin or\n"
                       "GridOffsets values - unable to process WCS coverage.");
+            CSLDestroy( papszOffsetTokens );
+            CSLDestroy( papszOriginTokens );
             return FALSE;
         }
     }
 
     else
     {
-        CPLError( CE_Failure, CPLE_AppDefined, 
+        CPLError( CE_Failure, CPLE_AppDefined,
                   "Unrecognised GridCRS.GridType value '%s',\n"
                   "unable to process WCS coverage.",
                   pszGridType );
+        CSLDestroy( papszOffsetTokens );
+        CSLDestroy( papszOriginTokens );
         return FALSE;
     }
 

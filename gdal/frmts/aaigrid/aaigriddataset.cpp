@@ -958,16 +958,16 @@ GDALDataset * AAIGDataset::CreateCopy(
     char ** papszOptions,
     GDALProgressFunc pfnProgress, void * pProgressData )
 {
-    int  nBands = poSrcDS->GetRasterCount();
-    int  nXSize = poSrcDS->GetRasterXSize();
-    int  nYSize = poSrcDS->GetRasterYSize();
+    const int nBands = poSrcDS->GetRasterCount();
+    const int nXSize = poSrcDS->GetRasterXSize();
+    const int nYSize = poSrcDS->GetRasterYSize();
 
 /* -------------------------------------------------------------------- */
 /*      Some rudimentary checks                                         */
 /* -------------------------------------------------------------------- */
     if( nBands != 1 )
     {
-        CPLError( CE_Failure, CPLE_NotSupported, 
+        CPLError( CE_Failure, CPLE_NotSupported,
                   "AAIG driver doesn't support %d bands.  Must be 1 band.\n",
                   nBands );
 
@@ -980,9 +980,7 @@ GDALDataset * AAIGDataset::CreateCopy(
 /* -------------------------------------------------------------------- */
 /*      Create the dataset.                                             */
 /* -------------------------------------------------------------------- */
-    VSILFILE        *fpImage;
-
-    fpImage = VSIFOpenL( pszFilename, "wt" );
+    VSILFILE *fpImage = VSIFOpenL( pszFilename, "wt" );
     if( fpImage == NULL )
     {
         CPLError( CE_Failure, CPLE_OpenFailed, 
@@ -996,42 +994,42 @@ GDALDataset * AAIGDataset::CreateCopy(
 /* -------------------------------------------------------------------- */
     double      adfGeoTransform[6];
     char        szHeader[2000];
-    const char *pszForceCellsize = 
+    const char *pszForceCellsize =
         CSLFetchNameValue( papszOptions, "FORCE_CELLSIZE" );
 
     poSrcDS->GetGeoTransform( adfGeoTransform );
 
-    if( ABS(adfGeoTransform[1]+adfGeoTransform[5]) < 0.0000001 
-        || ABS(adfGeoTransform[1]-adfGeoTransform[5]) < 0.0000001 
+    if( ABS(adfGeoTransform[1]+adfGeoTransform[5]) < 0.0000001
+        || ABS(adfGeoTransform[1]-adfGeoTransform[5]) < 0.0000001
         || (pszForceCellsize && CSLTestBoolean(pszForceCellsize)) )
-        CPLsprintf( szHeader, 
-                 "ncols        %d\n" 
+        CPLsnprintf( szHeader, sizeof(szHeader),
+                 "ncols        %d\n"
                  "nrows        %d\n"
                  "xllcorner    %.12f\n"
                  "yllcorner    %.12f\n"
-                 "cellsize     %.12f\n", 
-                 nXSize, nYSize, 
-                 adfGeoTransform[0], 
+                 "cellsize     %.12f\n",
+                 nXSize, nYSize,
+                 adfGeoTransform[0],
                  adfGeoTransform[3] - nYSize * adfGeoTransform[1],
                  adfGeoTransform[1] );
     else
     {
         if( pszForceCellsize == NULL )
-            CPLError( CE_Warning, CPLE_AppDefined, 
+            CPLError( CE_Warning, CPLE_AppDefined,
                       "Producing a Golden Surfer style file with DX and DY instead\n"
                       "of CELLSIZE since the input pixels are non-square.  Use the\n"
                       "FORCE_CELLSIZE=TRUE creation option to force use of DX for\n"
                       "even though this will be distorted.  Most ASCII Grid readers\n"
                       "(ArcGIS included) do not support the DX and DY parameters.\n" );
-        CPLsprintf( szHeader, 
-                 "ncols        %d\n" 
+        CPLsnprintf( szHeader, sizeof(szHeader),
+                 "ncols        %d\n"
                  "nrows        %d\n"
                  "xllcorner    %.12f\n"
                  "yllcorner    %.12f\n"
                  "dx           %.12f\n"
-                 "dy           %.12f\n", 
-                 nXSize, nYSize, 
-                 adfGeoTransform[0], 
+                 "dy           %.12f\n",
+                 nXSize, nYSize,
+                 adfGeoTransform[0],
                  adfGeoTransform[3] + nYSize * adfGeoTransform[5],
                  adfGeoTransform[1],
                  fabs(adfGeoTransform[5]) );
@@ -1111,7 +1109,7 @@ GDALDataset * AAIGDataset::CreateCopy(
         padfScanline = (double *) CPLMalloc( nXSize *
                                     GDALGetDataTypeSize(GDT_Float64) / 8 );
 
-    int bHasOuputDecimalDot = FALSE;
+    int bHasOutputDecimalDot = FALSE;
     for( iLine = 0; eErr == CE_None && iLine < nYSize; iLine++ )
     {
         CPLString osBuf;
@@ -1146,14 +1144,14 @@ GDALDataset * AAIGDataset::CreateCopy(
                 CPLsprintf( szHeader, szFormatFloat, padfScanline[iPixel] );
 
                 // Make sure that as least one value has a decimal point (#6060)
-                if( !bHasOuputDecimalDot )
+                if( !bHasOutputDecimalDot )
                 {
                     if( strchr(szHeader, '.') || strchr(szHeader, 'e') || strchr(szHeader, 'E') )
-                        bHasOuputDecimalDot = TRUE;
+                        bHasOutputDecimalDot = TRUE;
                     else if( !CPLIsInf(padfScanline[iPixel]) && !CPLIsNan(padfScanline[iPixel]) )
                     {
                         strcat(szHeader, ".0");
-                        bHasOuputDecimalDot = TRUE;
+                        bHasOutputDecimalDot = TRUE;
                     }
                 }
 

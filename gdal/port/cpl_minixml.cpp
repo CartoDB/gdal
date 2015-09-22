@@ -223,11 +223,11 @@ static XMLTokenType ReadToken( ParseContext *psContext )
     else if( chNext == '<' 
           && EQUALN(psContext->pszInput+psContext->nInputOffset,"!DOCTYPE",8) )
     {
-        int   bInQuotes = FALSE;
+        bool bInQuotes = false;
         psContext->eTokenType = TLiteral;
-        
+
         AddToToken( psContext, '<' );
-        do { 
+        do {
             chNext = ReadChar(psContext);
             if( chNext == '\0' )
             {
@@ -290,7 +290,7 @@ static XMLTokenType ReadToken( ParseContext *psContext )
             }
 
             AddToToken( psContext, chNext );
-        } while( TRUE );
+        } while( true );
     }
 /* -------------------------------------------------------------------- */
 /*      Handle CDATA.                                                   */
@@ -1009,9 +1009,9 @@ CPLSerializeXMLNode( const CPLXMLNode *psNode, int nIndent,
 /* -------------------------------------------------------------------- */
     else if( psNode->eType == CXT_Element )
     {
-        int             bHasNonAttributeChildren = FALSE;
+        bool            bHasNonAttributeChildren = false;
         CPLXMLNode      *psChild;
-        
+
         memset( *ppszText + *pnLength, ' ', nIndent );
         *pnLength += nIndent;
         (*ppszText)[*pnLength] = '\0';
@@ -1042,12 +1042,12 @@ CPLSerializeXMLNode( const CPLXMLNode *psNode, int nIndent,
         }
         else
         {
-            int         bJustText = TRUE;
+            bool bJustText = true;
 
             strcat( *ppszText + *pnLength, ">" );
 
-            for( psChild = psNode->psChild; 
-                 psChild != NULL; 
+            for( psChild = psNode->psChild;
+                 psChild != NULL;
                  psChild = psChild->psNext )
             {
                 if( psChild->eType == CXT_Attribute )
@@ -1055,7 +1055,7 @@ CPLSerializeXMLNode( const CPLXMLNode *psNode, int nIndent,
 
                 if( psChild->eType != CXT_Text && bJustText )
                 {
-                    bJustText = FALSE;
+                    bJustText = false;
                     strcat( *ppszText + *pnLength, "\n" );
                 }
 
@@ -1132,17 +1132,17 @@ char *CPLSerializeXMLTree( const CPLXMLNode *psNode )
  * @return the newly created node, now owned by the caller (or parent node).
  */
 
-CPLXMLNode *CPLCreateXMLNode( CPLXMLNode *poParent, CPLXMLNodeType eType, 
+CPLXMLNode *CPLCreateXMLNode( CPLXMLNode *poParent, CPLXMLNodeType eType,
                               const char *pszText )
 
 {
-    CPLXMLNode  *psNode;
 
 /* -------------------------------------------------------------------- */
 /*      Create new node.                                                */
 /* -------------------------------------------------------------------- */
-    psNode = (CPLXMLNode *) CPLCalloc(sizeof(CPLXMLNode),1);
-    
+    CPLXMLNode *psNode
+        = (CPLXMLNode *) CPLCalloc(sizeof(CPLXMLNode),1);
+
     psNode->eType = eType;
     psNode->pszValue = CPLStrdup( pszText );
 
@@ -1163,7 +1163,7 @@ CPLXMLNode *CPLCreateXMLNode( CPLXMLNode *poParent, CPLXMLNodeType eType,
             psLink->psNext = psNode;
         }
     }
-    
+
     return psNode;
 }
 
@@ -1174,22 +1174,22 @@ CPLXMLNode *CPLCreateXMLNode( CPLXMLNode *poParent, CPLXMLNodeType eType,
 /* Same as CPLCreateXMLNode() but can return NULL in case of out-of-memory */
 /* situation */
 
-static CPLXMLNode *_CPLCreateXMLNode( CPLXMLNode *poParent, CPLXMLNodeType eType, 
-                               const char *pszText )
+static CPLXMLNode *_CPLCreateXMLNode( CPLXMLNode *poParent, CPLXMLNodeType eType,
+                                      const char *pszText )
 
 {
-    CPLXMLNode  *psNode;
 
 /* -------------------------------------------------------------------- */
 /*      Create new node.                                                */
 /* -------------------------------------------------------------------- */
-    psNode = (CPLXMLNode *) VSICalloc(sizeof(CPLXMLNode),1);
+    CPLXMLNode  *psNode
+        = (CPLXMLNode *) VSICalloc(sizeof(CPLXMLNode),1);
     if (psNode == NULL)
     {
         CPLError(CE_Failure, CPLE_OutOfMemory, "Cannot allocate CPLXMLNode");
         return NULL;
     }
-    
+
     psNode->eType = eType;
     psNode->pszValue = VSIStrdup( pszText );
     if (psNode->pszValue == NULL)
@@ -1216,7 +1216,7 @@ static CPLXMLNode *_CPLCreateXMLNode( CPLXMLNode *poParent, CPLXMLNodeType eType
             psLink->psNext = psNode;
         }
     }
-    
+
     return psNode;
 }
 
@@ -1292,7 +1292,7 @@ void CPLDestroyXMLNode( CPLXMLNode *psNode )
 CPLXMLNode *CPLSearchXMLNode( CPLXMLNode *psRoot, const char *pszElement )
 
 {
-    int         bSideSearch = FALSE;
+    bool        bSideSearch = false;
     CPLXMLNode *psChild, *psResult;
 
     if( psRoot == NULL || pszElement == NULL )
@@ -1300,7 +1300,7 @@ CPLXMLNode *CPLSearchXMLNode( CPLXMLNode *psRoot, const char *pszElement )
 
     if( *pszElement == '=' )
     {
-        bSideSearch = TRUE;
+        bSideSearch = true;
         pszElement++;
     }
 
@@ -1384,14 +1384,14 @@ CPLXMLNode *CPLGetXMLNode( CPLXMLNode *psRoot, const char *pszPath )
     char        *apszTokens[2];
     char        **papszTokens;
     int         iToken = 0;
-    int         bSideSearch = FALSE;
+    bool        bSideSearch = false;
 
     if( psRoot == NULL || pszPath == NULL )
         return NULL;
 
     if( *pszPath == '=' )
     {
-        bSideSearch = TRUE;
+        bSideSearch = true;
         pszPath++;
     }
 
@@ -1413,7 +1413,7 @@ CPLXMLNode *CPLGetXMLNode( CPLXMLNode *psRoot, const char *pszPath )
         if( bSideSearch )
         {
             psChild = psRoot;
-            bSideSearch = FALSE;
+            bSideSearch = false;
         }
         else
             psChild = psRoot->psChild;
@@ -1669,22 +1669,21 @@ void CPLAddXMLSibling( CPLXMLNode *psOlderSibling, CPLXMLNode *psNewSibling )
  * attaches the element to the passed parent.
  *
  * @param psParent the parent node to which the resulting node should
- * be attached.  May be NULL to keep as freestanding. 
+ * be attached.  May be NULL to keep as freestanding.
  *
  * @param pszName the element name to create.
- * @param pszValue the text to attach to the element. Must not be NULL. 
+ * @param pszValue the text to attach to the element. Must not be NULL.
  *
  * @return the pointer to the new element node.
  */
 
-CPLXMLNode *CPLCreateXMLElementAndValue( CPLXMLNode *psParent, 
-                                         const char *pszName, 
+CPLXMLNode *CPLCreateXMLElementAndValue( CPLXMLNode *psParent,
+                                         const char *pszName,
                                          const char *pszValue )
 
 {
-    CPLXMLNode *psElementNode;
-
-    psElementNode = CPLCreateXMLNode( psParent, CXT_Element, pszName );
+    CPLXMLNode *psElementNode
+        = CPLCreateXMLNode( psParent, CXT_Element, pszName );
     CPLCreateXMLNode( psElementNode, CXT_Text, pszValue );
 
     return psElementNode;
@@ -1722,9 +1721,8 @@ void CPLAddXMLAttributeAndValue( CPLXMLNode *psParent,
                                  const char *pszName,
                                  const char *pszValue )
 {
-    CPLXMLNode *psAttributeNode;
-
-    psAttributeNode = CPLCreateXMLNode( psParent, CXT_Attribute, pszName );
+    CPLXMLNode *psAttributeNode
+        = CPLCreateXMLNode( psParent, CXT_Attribute, pszName );
     CPLCreateXMLNode( psAttributeNode, CXT_Text, pszValue );
 }
 
@@ -1810,17 +1808,20 @@ int CPLSetXMLValue( CPLXMLNode *psRoot,  const char *pszPath,
     while( papszTokens[iToken] != NULL && psRoot != NULL )
     {
         CPLXMLNode *psChild;
-        int        bIsAttribute = FALSE;
+        bool        bIsAttribute = false;
         const char *pszName = papszTokens[iToken];
 
         if( pszName[0] == '#' )
         {
-            bIsAttribute = TRUE;
+            bIsAttribute = true;
             pszName++;
         }
 
         if( psRoot->eType != CXT_Element )
+        {
+            CSLDestroy( papszTokens );
             return FALSE;
+        }
 
         for( psChild = psRoot->psChild; psChild != NULL; 
              psChild = psChild->psNext ) 

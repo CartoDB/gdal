@@ -288,19 +288,18 @@ GDALRasterAttributeTable *IDARasterBand::GetDefaultRAT()
 /*                             IDADataset()                             */
 /************************************************************************/
 
-IDADataset::IDADataset()
+IDADataset::IDADataset() :
+    nImageType(0), nProjection(0), dfLatCenter(0.0), dfLongCenter(0.0),
+    dfXCenter(0.0), dfYCenter(0.0), dfDX(0.0), dfDY(0.0), dfParallel1(0.0),
+    dfParallel2(0.0), nMissing(0), dfM(0.0), dfB(0.0), fpRaw(NULL),
+    pszProjection(NULL), bHeaderDirty(FALSE)
 {
-    fpRaw = NULL;
-    pszProjection = NULL;
-
     adfGeoTransform[0] = 0.0;
     adfGeoTransform[1] = 1.0;
     adfGeoTransform[2] = 0.0;
     adfGeoTransform[3] = 0.0;
     adfGeoTransform[4] = 0.0;
     adfGeoTransform[5] = 1.0;
-
-    bHeaderDirty = FALSE;
 }
 
 /************************************************************************/
@@ -994,7 +993,7 @@ static void c2tp(double x, GByte *r)
   }
   // stuff mantissa into Turbo Pascal real
   mant = modf(mant * 128, &temp);
-  r[5] = (unsigned char) temp;
+  r[5] = (unsigned char) (((int)temp) & 0xff);
   for (i = 4; i >= 1; i--)
   {
     mant = modf(mant * 256, &temp);
@@ -1126,4 +1125,3 @@ void GDALRegister_IDA()
         GetGDALDriverManager()->RegisterDriver( poDriver );
     }
 }
-

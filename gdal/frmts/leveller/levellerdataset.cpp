@@ -248,20 +248,20 @@ class LevellerRasterBand;
 class LevellerDataset : public GDALPamDataset
 {
     friend class LevellerRasterBand;
-	friend class digital_axis;
+    friend class digital_axis;
 
     int			m_version;
 
-	char*		m_pszFilename;
+    char*		m_pszFilename;
     char*		m_pszProjection;
 
     //char		m_szUnits[8];
-	char		m_szElevUnits[8];
+    char		m_szElevUnits[8];
     double		m_dElevScale;	// physical-to-logical scaling.
     double		m_dElevBase;	// logical offset.
     double		m_adfTransform[6];
-	//double		m_dMeasurePerPixel;
-	double		m_dLogSpan[2];
+    //double		m_dMeasurePerPixel;
+    double		m_dLogSpan[2];
 
     VSILFILE*			m_fp;
     vsi_l_offset	m_nDataOffset;
@@ -321,7 +321,7 @@ public:
 class digital_axis
 {
 	public:
-		digital_axis() : m_eStyle(LEV_DA_PIXEL_SIZED) {}
+  digital_axis() : m_eStyle(LEV_DA_PIXEL_SIZED), m_fixedEnd(0) {}
 
 		bool get(LevellerDataset& ds, VSILFILE* fp, int n)
 		{
@@ -352,7 +352,7 @@ class digital_axis
 
 					case LEV_DA_PIXEL_SIZED:
 						return m_d[1] + (m_d[0] * (pixels-1));
-				}					
+				}
 			}
 			return m_d[0];
 		}
@@ -380,7 +380,7 @@ class digital_axis
 
 				case LEV_DA_PIXEL_SIZED:
 					return m_d[1 - m_fixedEnd] * (pixels-1);
-					
+
 			}
 			CPLAssert(FALSE);
 			return 0.0;
@@ -388,7 +388,7 @@ class digital_axis
 
 
 	protected:
-		int		m_eStyle;
+		int	m_eStyle;
 		size_t	m_fixedEnd;
 		double	m_d[2];
 };
@@ -495,7 +495,7 @@ CPLErr LevellerRasterBand::IWriteBlock
 
 #ifdef CPL_MSB 
 		GDALSwapWords( m_pLine, pixelsize, nBlockXSize, pixelsize );
-#endif    
+#endif
 		if(1 == VSIFWriteL(m_pLine, rowbytes, 1, ds.m_fp))
 			return CE_None;
 	}
@@ -570,7 +570,7 @@ CPLErr LevellerRasterBand::IReadBlock( CPL_UNUSED int nBlockXOff,
 /*      Convert from legacy-format fixed-point if necessary.            */
 /* -------------------------------------------------------------------- */
     float* pf = (float*)pImage;
-	
+
     if(poGDS->m_version < 6)
     {
         GInt32* pi = (int*)pImage;
@@ -579,10 +579,10 @@ CPLErr LevellerRasterBand::IReadBlock( CPL_UNUSED int nBlockXOff,
     }
 
 
-#if 0
 /* -------------------------------------------------------------------- */
 /*      Convert raw elevations to realworld elevs.                      */
 /* -------------------------------------------------------------------- */
+#if 0
     for(size_t i = 0; i < nBlockXSize; i++)
         pf[i] *= poGDS->m_dWorldscale; //this->GetScale();
 #endif
@@ -597,9 +597,9 @@ CPLErr LevellerRasterBand::IReadBlock( CPL_UNUSED int nBlockXOff,
 /************************************************************************/
 const char *LevellerRasterBand::GetUnitType()
 {
-	// Return elevation units.
+    // Return elevation units.
 
-	LevellerDataset *poGDS = (LevellerDataset *) poDS;
+    LevellerDataset *poGDS = (LevellerDataset *) poDS;
 
     return poGDS->m_szElevUnits;
 }
@@ -640,12 +640,10 @@ double LevellerRasterBand::GetOffset(int* pbSuccess)
 /*                          LevellerDataset()                           */
 /************************************************************************/
 
-LevellerDataset::LevellerDataset()
-{
-    m_fp = NULL;
-    m_pszProjection = NULL;
-    m_pszFilename = NULL;
-}
+LevellerDataset::LevellerDataset() :
+    m_version(0), m_pszFilename(NULL), m_pszProjection(NULL), m_dElevScale(),
+    m_dElevBase(), m_fp(NULL), m_nDataOffset()
+{ }
 
 /************************************************************************/
 /*                          ~LevellerDataset()                          */
@@ -715,7 +713,7 @@ bool LevellerDataset::compute_elev_scaling
 		double xg[2], yg[2];
 		this->raw_to_proj(xr, yr, xg[0], yg[0]);
 		this->raw_to_proj(xr+1, yr+1, xg[1], yg[1]);
-		
+
 		// The earths' circumference shrinks using a sin()
 		// curve as we go up in latitude.
 		const double dLatCircum = kdEarthCircumEquat 
@@ -770,7 +768,7 @@ bool LevellerDataset::write_header()
 	{
 		this->write_tag("coordsys_wkt", m_pszProjection);
 		const UNITLABEL units_elev = this->id_to_code(m_szElevUnits);
-		
+
 		const int bHasECS = 
 			(units_elev != UNITLABEL_PIXEL && units_elev != UNITLABEL_UNKNOWN);
 
@@ -788,7 +786,7 @@ bool LevellerDataset::write_header()
 
 			//elev offset, in real units.
 			this->write_tag("coordsys_em_base", m_dElevBase);
-				
+
 			this->write_tag("coordsys_em_units", units_elev);
 		}
 
@@ -898,7 +896,7 @@ GDALDataset* LevellerDataset::Create
 	LevellerDataset* poDS = new LevellerDataset;
 
     poDS->eAccess = GA_Update;
-	
+
 	poDS->m_pszFilename = CPLStrdup(pszFilename);
 
     poDS->m_fp = VSIFOpenL( pszFilename, "wb+" );
@@ -943,13 +941,13 @@ GDALDataset* LevellerDataset::Create
 		poDS->m_dLogSpan[1] = t;
 	}
 
-// -------------------------------------------------------------------- 
-//      Instance a band.                                                
-// -------------------------------------------------------------------- 
+// --------------------------------------------------------------------
+//      Instance a band.
+// --------------------------------------------------------------------
     poDS->SetBand( 1, new LevellerRasterBand( poDS ) );
 
 	return poDS;
-}								
+}
 
 
 bool LevellerDataset::write_byte(size_t n)
@@ -988,7 +986,7 @@ bool LevellerDataset::write_tag_start(const char* pszTag, size_t n)
 		return (1 == VSIFWriteL(pszTag, strlen(pszTag), 1, m_fp)
 			&& this->write(n));
 	}
-	
+
 	return false;
 }
 
@@ -1405,7 +1403,10 @@ bool LevellerDataset::load_from_file(VSILFILE* file, const char* pszFilename)
                                 unitcode = (UNITLABEL) unitcode_int;
 				const char* pszUnitID = this->code_to_id(unitcode);
 				if(pszUnitID != NULL)
-					strcpy(m_szElevUnits, pszUnitID);
+                                {
+                                    strncpy(m_szElevUnits, pszUnitID, sizeof(m_szElevUnits));
+                                    m_szElevUnits[sizeof(m_szElevUnits) - 1] = '\0';
+                                }
 				else
 				{
 					CPLError( CE_Failure, CPLE_OpenFailed,
@@ -1513,14 +1514,12 @@ GDALDataset *LevellerDataset::Open( GDALOpenInfo * poOpenInfo )
 {
     // The file should have at least 5 header bytes
     // and hf_w, hf_b, and hf_data tags.
-#ifdef DEBUG
 
-#endif
     if( poOpenInfo->nHeaderBytes < 5+13+13+16 )
         return NULL;
 
-	if( !LevellerDataset::Identify(poOpenInfo))
-		return NULL;
+    if( !LevellerDataset::Identify(poOpenInfo))
+        return NULL;
 
     const int version = poOpenInfo->pabyHeader[4];
     if(version < 4 || version > 7)
@@ -1531,7 +1530,7 @@ GDALDataset *LevellerDataset::Open( GDALOpenInfo * poOpenInfo )
 /*      Create a corresponding GDALDataset.                             */
 /* -------------------------------------------------------------------- */
 
-	LevellerDataset* poDS = new LevellerDataset();
+    LevellerDataset* poDS = new LevellerDataset();
 
     poDS->m_version = version;
 
@@ -1546,13 +1545,14 @@ GDALDataset *LevellerDataset::Open( GDALOpenInfo * poOpenInfo )
         CPLError( CE_Failure, CPLE_OpenFailed,
                   "Failed to re-open %s within Leveller driver.",
                   poOpenInfo->pszFilename );
+        delete poDS;
         return NULL;
     }
     poDS->eAccess = poOpenInfo->eAccess;
 
-    
+
 /* -------------------------------------------------------------------- */
-/*	Read the file.							                            */
+/*	Read the file.                                                  */
 /* -------------------------------------------------------------------- */
     if( !poDS->load_from_file( poDS->m_fp, poOpenInfo->pszFilename ) )
     {
@@ -1597,12 +1597,11 @@ class LevellerDataset : public GDALPamDataset
 void GDALRegister_Leveller()
 
 {
-    GDALDriver	*poDriver;
 
     if( GDALGetDriverByName( "Leveller" ) == NULL )
     {
-        poDriver = new GDALDriver();
-        
+        GDALDriver *poDriver = new GDALDriver();
+
         poDriver->SetDescription( "Leveller" );
         poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
         poDriver->SetMetadataItem( GDAL_DMD_EXTENSION, 
@@ -1611,10 +1610,8 @@ void GDALRegister_Leveller()
                                    "Leveller heightfield" );
         poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC, 
                                    "frmt_leveller.html" );
-        
-#if GDAL_VERSION_NUM >= 1500
+
         poDriver->pfnIdentify = LevellerDataset::Identify;
-#endif
         poDriver->pfnOpen = LevellerDataset::Open;
         poDriver->pfnCreate = LevellerDataset::Create;
 

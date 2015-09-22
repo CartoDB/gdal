@@ -660,6 +660,8 @@ class OGROpenFileGDBSimpleSQLLayer: public OGRLayer
        virtual const char* GetFIDColumn() { return poBaseLayer->GetFIDColumn(); }
        virtual OGRErr      GetExtent( OGREnvelope *psExtent, int bForce )
                             { return poBaseLayer->GetExtent(psExtent, bForce); }
+       virtual OGRErr      GetExtent(int iGeomField, OGREnvelope *psExtent, int bForce)
+                { return OGRLayer::GetExtent(iGeomField, psExtent, bForce); }
        virtual GIntBig     GetFeatureCount(int bForce);
 };
 
@@ -921,7 +923,7 @@ OGRLayer* OGROpenFileGDBDataSource::ExecuteSQL( const char *pszSQLCommand,
         CSLTestBoolean(CPLGetConfigOption("OPENFILEGDB_USE_INDEX", "YES")) )
     {
         swq_select oSelect;
-        if( oSelect.preparse(pszSQLCommand) != OGRERR_NONE )
+        if( oSelect.preparse(pszSQLCommand) != CE_None )
             return NULL;
 
 /* -------------------------------------------------------------------- */

@@ -637,14 +637,13 @@ void CPLJoinThread(CPL_UNUSED CPLJoinableThread* hJoinableThread)
 void CPLSleep( double dfWaitInSeconds )
 {
     time_t  ltime;
-    time_t  ttime;
 
     time( &ltime );
-    ttime = ltime + (int) (dfWaitInSeconds+0.5);
+    time_t ttime = ltime + (int) (dfWaitInSeconds+0.5);
 
     for( ; ltime < ttime; time(&ltime) )
     {
-        /* currently we just busy wait.  Perhaps we could at least block on 
+        /* currently we just busy wait.  Perhaps we could at least block on
            io? */
     }
 }
@@ -994,14 +993,11 @@ void  CPLDestroyCond( CPLCond *hCond )
 void *CPLLockFile( const char *pszPath, double dfWaitInSeconds )
 
 {
-    char      *pszLockFilename;
-    HANDLE    hLockFile;
-    
-    pszLockFilename = (char *) CPLMalloc(strlen(pszPath) + 30);
+    char *pszLockFilename = (char *) CPLMalloc(strlen(pszPath) + 30);
     sprintf( pszLockFilename, "%s.lock", pszPath );
 
-    hLockFile = 
-        CreateFile( pszLockFilename, GENERIC_WRITE, 0, NULL,CREATE_NEW, 
+    HANDLE hLockFile =
+        CreateFile( pszLockFilename, GENERIC_WRITE, 0, NULL,CREATE_NEW,
                     FILE_ATTRIBUTE_NORMAL|FILE_FLAG_DELETE_ON_CLOSE, NULL );
 
     while( GetLastError() == ERROR_ALREADY_EXISTS
@@ -1157,7 +1153,7 @@ void CPLSleep( double dfWaitInSeconds )
     Sleep( (DWORD) (dfWaitInSeconds * 1000.0) );
 }
 
-static int           bTLSKeySetup = FALSE;
+static bool          bTLSKeySetup = false;
 static DWORD         nTLSKey;
 
 /************************************************************************/
@@ -1176,7 +1172,7 @@ static void **CPLGetTLSList()
         {
             CPLEmergencyError( "CPLGetTLSList(): TlsAlloc() failed!" );
         }
-        bTLSKeySetup = TRUE;
+        bTLSKeySetup = true;
     }
 
     papTLSList = (void **) TlsGetValue( nTLSKey );
@@ -2157,22 +2153,25 @@ void  CPLDestroyLock( CPLLock* psLock )
 /*                       CPLLockSetDebugPerf()                          */
 /************************************************************************/
 
-void CPLLockSetDebugPerf( CPLLock* psLock, int bEnableIn )
-{
 #ifdef DEBUG_CONTENTION
+void CPLLockSetDebugPerf(CPLLock* psLock, int bEnableIn)
+{
     psLock->bDebugPerf = bEnableIn;
-#else
-    if( bEnableIn )
-    {
-        static int bOnce = FALSE;
-        if( !bOnce )
-        {
-            bOnce = TRUE;
-            CPLDebug("LOCK", "DEBUG_CONTENTION not available");
-        }
-    }
-#endif
 }
+#else
+void CPLLockSetDebugPerf(CPLLock* /* psLock */, int bEnableIn)
+{
+    if( !bEnableIn )
+        return;
+
+    static bool bOnce = false;
+    if( !bOnce )
+    {
+        bOnce = true;
+        CPLDebug("LOCK", "DEBUG_CONTENTION not available");
+    }
+}
+#endif
 
 /************************************************************************/
 /*                           CPLLockHolder()                            */

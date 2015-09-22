@@ -752,7 +752,8 @@ GDALDataset *GDALDriver::CreateCopy( const char * pszFilename,
 /*      name.  But even if that seems to fail we will continue since    */
 /*      it might just be a corrupt file or something.                   */
 /* -------------------------------------------------------------------- */
-    int bAppendSubdataset = CSLFetchBoolean(papszOptions, "APPEND_SUBDATASET", FALSE);
+    const bool bAppendSubdataset
+        = CSLFetchBoolean(papszOptions, "APPEND_SUBDATASET", FALSE);
     if( !bAppendSubdataset &&
         CSLFetchBoolean(papszOptions, "QUIET_DELETE_ON_CREATE_COPY", TRUE) )
         QuietDelete( pszFilename );
@@ -774,7 +775,7 @@ GDALDataset *GDALDriver::CreateCopy( const char * pszFilename,
 /* -------------------------------------------------------------------- */
     int iIdxInternalDataset =
         CSLPartialFindString(papszOptions, "_INTERNAL_DATASET=");
-    int bInternalDataset = FALSE;
+    bool bInternalDataset = false;
     if( iIdxInternalDataset >= 0 )
     {
         bInternalDataset = CSLFetchBoolean(papszOptions, "_INTERNAL_DATASET", FALSE);
@@ -1487,6 +1488,7 @@ int GDALValidateOptions( const char* pszOptionList,
         if( EQUAL(pszKey, "VALIDATE_OPEN_OPTIONS") )
         {
             papszOptionsToValidate ++;
+            CPLFree(pszKey);
             continue;
         }
 
@@ -1667,6 +1669,7 @@ int GDALValidateOptions( const char* pszOptionList,
                         CPLError(CE_Warning, CPLE_NotSupported,
                              "'%s' is an unexpected value for %s %s that should be >= %s.",
                              pszValue, pszKey, pszErrorMessageOptionType, pszMin);
+                        CPLFree(pszKey);
                         break;
                     }
                     if( pszMax && dfVal > CPLAtof(pszMax) )
@@ -1674,6 +1677,7 @@ int GDALValidateOptions( const char* pszOptionList,
                         CPLError(CE_Warning, CPLE_NotSupported,
                              "'%s' is an unexpected value for %s %s that should be <= %s.",
                              pszValue, pszKey, pszErrorMessageOptionType, pszMax);
+                        CPLFree(pszKey);
                         break;
                     }
                 }
@@ -1691,7 +1695,7 @@ int GDALValidateOptions( const char* pszOptionList,
             }
             else if (EQUAL(pszType, "STRING-SELECT"))
             {
-                int bMatchFound = FALSE;
+                bool bMatchFound = false;
                 CPLXMLNode* psStringSelect = psChildNode->psChild;
                 while(psStringSelect)
                 {
@@ -1704,7 +1708,7 @@ int GDALValidateOptions( const char* pszOptionList,
                             if (psOptionNode->eType == CXT_Text &&
                                 EQUAL(psOptionNode->pszValue, pszValue))
                             {
-                                bMatchFound = TRUE;
+                                bMatchFound = true;
                                 break;
                             }
                             psOptionNode = psOptionNode->psNext;

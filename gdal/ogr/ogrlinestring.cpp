@@ -39,13 +39,9 @@ CPL_CVSID("$Id$");
 /*                           OGRSimpleCurve()                           */
 /************************************************************************/
 
-OGRSimpleCurve::OGRSimpleCurve()
-
-{
-    nPointCount = 0;
-    paoPoints = NULL;
-    padfZ = NULL;
-}
+OGRSimpleCurve::OGRSimpleCurve() :
+    nPointCount(0), paoPoints(NULL), padfZ(NULL)
+{ }
 
 /************************************************************************/
 /*                OGRSimpleCurve( const OGRSimpleCurve& )               */
@@ -53,10 +49,10 @@ OGRSimpleCurve::OGRSimpleCurve()
 
 /**
  * \brief Copy constructor.
- * 
+ *
  * Note: before GDAL 2.1, only the default implementation of the constructor
  * existed, which could be unsafe to use.
- * 
+ *
  * @since GDAL 2.1
  */
 
@@ -123,16 +119,16 @@ void OGRSimpleCurve::flattenTo2D()
 OGRGeometry *OGRSimpleCurve::clone() const
 
 {
-    OGRLineString       *poNewLineString;
+    OGRSimpleCurve       *poCurve;
 
-    poNewLineString = (OGRLineString*)
+    poCurve = (OGRSimpleCurve*)
             OGRGeometryFactory::createGeometry(getGeometryType());
 
-    poNewLineString->assignSpatialReference( getSpatialReference() );
-    poNewLineString->setPoints( nPointCount, paoPoints, padfZ );
-    poNewLineString->setCoordinateDimension( getCoordinateDimension() );
+    poCurve->assignSpatialReference( getSpatialReference() );
+    poCurve->setPoints( nPointCount, paoPoints, padfZ );
+    poCurve->setCoordinateDimension( getCoordinateDimension() );
     
-    return poNewLineString;
+    return poCurve;
 }
 
 /************************************************************************/
@@ -545,7 +541,8 @@ void OGRSimpleCurve::setPoints( int nPointsIn, OGRRawPoint * paoPointsIn,
     if (nPointCount < nPointsIn)
         return;
 
-    memcpy( paoPoints, paoPointsIn, sizeof(OGRRawPoint) * nPointsIn);
+    if( nPointsIn )
+        memcpy( paoPoints, paoPointsIn, sizeof(OGRRawPoint) * nPointsIn);
 
 /* -------------------------------------------------------------------- */
 /*      Check 2D/3D.                                                    */
@@ -557,7 +554,8 @@ void OGRSimpleCurve::setPoints( int nPointsIn, OGRRawPoint * paoPointsIn,
     else if( padfZ )
     {
         Make3D();
-        memcpy( this->padfZ, padfZ, sizeof(double) * nPointsIn );
+        if( nPointsIn )
+            memcpy( this->padfZ, padfZ, sizeof(double) * nPointsIn );
     }
 }
 
@@ -581,11 +579,9 @@ void OGRSimpleCurve::setPoints( int nPointsIn, OGRRawPoint * paoPointsIn,
  */
 
 void OGRSimpleCurve::setPoints( int nPointsIn, double * padfX, double * padfY,
-                               double * padfZ )
+                                double * padfZ )
 
 {
-    int         i;
-
 /* -------------------------------------------------------------------- */
 /*      Check 2D/3D.                                                    */
 /* -------------------------------------------------------------------- */
@@ -593,7 +589,7 @@ void OGRSimpleCurve::setPoints( int nPointsIn, double * padfX, double * padfY,
         Make2D();
     else
         Make3D();
-    
+
 /* -------------------------------------------------------------------- */
 /*      Assign values.                                                  */
 /* -------------------------------------------------------------------- */
@@ -601,14 +597,18 @@ void OGRSimpleCurve::setPoints( int nPointsIn, double * padfX, double * padfY,
     if (nPointCount < nPointsIn)
         return;
 
-    for( i = 0; i < nPointsIn; i++ )
+    for( int i = 0; i < nPointsIn; i++ )
     {
         paoPoints[i].x = padfX[i];
         paoPoints[i].y = padfY[i];
     }
 
-    if( this->padfZ != NULL )
-        memcpy( this->padfZ, padfZ, sizeof(double) * nPointsIn );
+    if( !padfZ || !nPointsIn )
+    {
+        return;
+    }
+
+    memcpy( this->padfZ, padfZ, sizeof(double) * nPointsIn );
 }
 
 /************************************************************************/
@@ -630,7 +630,7 @@ void OGRSimpleCurve::setPoints( int nPointsIn, double * padfX, double * padfY,
 
 void OGRSimpleCurve::getPoints( OGRRawPoint * paoPointsOut, double * padfZ ) const
 {
-    if ( ! paoPointsOut )
+    if ( ! paoPointsOut || nPointCount == 0 )
         return;
         
     memcpy( paoPointsOut, paoPoints, sizeof(OGRRawPoint) * nPointCount );
@@ -855,7 +855,7 @@ OGRErr OGRSimpleCurve::importFromWkb( unsigned char * pabyData,
                                                       16,
                                                       nNewNumPoints,
                                                       eWkbVariant );
-    if( eErr >= 0 )
+    if( eErr != OGRERR_NONE )
         return eErr;
 
     /* Check if the wkb stream buffer is big enough to store
@@ -891,7 +891,7 @@ OGRErr OGRSimpleCurve::importFromWkb( unsigned char * pabyData,
             memcpy( padfZ + i, pabyData + 9 + 16 + i*24, 8 );
         }
     }
-    else
+    else if( nPointCount )
     {
         memcpy( paoPoints, pabyData + 9, 16 * nPointCount );
     }
@@ -970,7 +970,7 @@ OGRErr  OGRSimpleCurve::exportToWkb( OGRwkbByteOrder eByteOrder,
             memcpy( pabyData + 9 + 16 + 24*i, padfZ+i, 8 );
         }
     }
-    else
+    else if( nPointCount )
         memcpy( pabyData+9, paoPoints, 16 * nPointCount );
 
 /* -------------------------------------------------------------------- */
@@ -1003,8 +1003,9 @@ OGRErr OGRSimpleCurve::importFromWkt( char ** ppszInput )
 
 {
     int bHasZ = FALSE, bHasM = FALSE;
-    OGRErr      eErr = importPreambuleFromWkt(ppszInput, &bHasZ, &bHasM);
-    if( eErr >= 0 )
+    bool bIsEmpty = false;
+    OGRErr      eErr = importPreambuleFromWkt(ppszInput, &bHasZ, &bHasM, &bIsEmpty);
+    if( eErr != OGRERR_NONE || bIsEmpty )
         return eErr;
 
     const char  *pszInput = *ppszInput;
@@ -1591,9 +1592,7 @@ void OGRSimpleCurve::getEnvelope( OGREnvelope3D * psEnvelope ) const
 OGRBoolean OGRSimpleCurve::Equals( OGRGeometry * poOther ) const
 
 {
-    OGRLineString       *poOLine = (OGRLineString *) poOther;
-    
-    if( poOLine == this )
+    if( poOther == this )
         return TRUE;
     
     if( poOther->getGeometryType() != getGeometryType() )
@@ -1604,6 +1603,7 @@ OGRBoolean OGRSimpleCurve::Equals( OGRGeometry * poOther ) const
     
     // we should eventually test the SRS.
 
+    OGRSimpleCurve       *poOLine = (OGRSimpleCurve *) poOther;
     if( getNumPoints() != poOLine->getNumPoints() )
         return FALSE;
 
@@ -1681,20 +1681,20 @@ OGRErr OGRSimpleCurve::transform( OGRCoordinateTransformation *poCT )
                     CPLGetConfigOption("OGR_ENABLE_PARTIAL_REPROJECTION", NULL);
             if (pszEnablePartialReprojection == NULL)
             {
-                static int bHasWarned = FALSE;
+                static bool bHasWarned = false;
                 if (!bHasWarned)
                 {
                     /* Check that there is at least one valid reprojected point */
                     /* and issue an error giving an hint to use OGR_ENABLE_PARTIAL_REPROJECTION */
-                    int bHasOneValidPoint = (j != 0);
+                    bool bHasOneValidPoint = (j != 0);
                     for( ; i < nPointCount && !bHasOneValidPoint; i++ )
                     {
                         if (pabSuccess[i])
-                            bHasOneValidPoint = TRUE;
+                            bHasOneValidPoint = true;
                     }
                     if (bHasOneValidPoint)
                     {
-                        bHasWarned = TRUE;
+                        bHasWarned = true;
                         CPLError(CE_Failure, CPLE_AppDefined,
                                 "Full reprojection failed, but partial is possible if you define "
                                 "OGR_ENABLE_PARTIAL_REPROJECTION configuration option to TRUE");

@@ -41,14 +41,41 @@
 #include "IntergraphBand.h"
 #include "IngrTypes.h"
 
+#include <algorithm>
+
+using std::fill;
+
 //  ----------------------------------------------------------------------------
 //                                  IntergraphRasterBand::IntergraphRasterBand()
 //  ----------------------------------------------------------------------------
 
-IntergraphRasterBand::IntergraphRasterBand( IntergraphDataset *poDS, 
+INGR_TileHeader::INGR_TileHeader() :
+    ApplicationType(0),
+    SubTypeCode(0),
+    WordsToFollow(0),
+    PacketVersion(0),
+    Identifier(0),
+    Properties(0),
+    DataTypeCode(0),
+    TileSize(0),
+    Reserved3(0)
+{
+    fill( Reserved, Reserved + CPL_ARRAYSIZE(Reserved), 0 );
+    fill( Reserved2, Reserved2 + CPL_ARRAYSIZE(Reserved2), 0 );
+    First.Start = 0;
+    First.Allocated = 0;
+    First.Used = 0;
+}
+
+IntergraphRasterBand::IntergraphRasterBand( IntergraphDataset *poDS,
                                             int nBand,
                                             int nBandOffset,
-                                            GDALDataType eType )
+                                            GDALDataType eType ) :
+    nBlockBufSize(0),
+    eFormat(IngrUnknownFrmt),
+    nFullBlocksX(0),
+    nFullBlocksY(0),
+    nRLEOffset(0)
 {
     this->poColorTable  = new GDALColorTable();
 
@@ -763,16 +790,16 @@ CPLErr IntergraphRLEBand::IReadBlock( int nBlockXOff,
 //                                  IntergraphBitmapBand::IntergraphBitmapBand()
 //  ----------------------------------------------------------------------------
 
-IntergraphBitmapBand::IntergraphBitmapBand( IntergraphDataset *poDS, 
+IntergraphBitmapBand::IntergraphBitmapBand( IntergraphDataset *poDS,
                                             int nBand,
                                             int nBandOffset,
                                             int nRGorB )
-    : IntergraphRasterBand( poDS, nBand, nBandOffset, GDT_Byte )
+    : IntergraphRasterBand( poDS, nBand, nBandOffset, GDT_Byte ),
+      pabyBMPBlock(NULL),
+      nBMPSize(0),
+      nQuality(0),
+      nRGBBand(nRGorB)
 {
-    nBMPSize    = 0;
-    nRGBBand    = nRGorB;
-    pabyBMPBlock = NULL;
-
     if (pabyBlockBuf == NULL)
         return;
 
@@ -784,7 +811,7 @@ IntergraphBitmapBand::IntergraphBitmapBand( IntergraphDataset *poDS,
         // ------------------------------------------------------------
 
         nBlockYSize = nRasterYSize;
-        nBMPSize    = INGR_GetDataBlockSize( poDS->pszFilename, 
+        nBMPSize    = INGR_GetDataBlockSize( poDS->pszFilename,
                                              hHeaderTwo.CatenatedFilePointer,
                                              nDataOffset);
     }

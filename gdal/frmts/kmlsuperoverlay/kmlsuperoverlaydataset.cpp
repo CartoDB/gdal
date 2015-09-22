@@ -75,7 +75,7 @@ void GenerateTiles(std::string filename,
    
     poTmpDataset = poMemDriver->Create("", dxsize, dysize, bands, GDT_Byte, NULL);
    
-    if (isJpegDriver == false)//Jpeg dataset only has one or three bands
+    if (!isJpegDriver)//Jpeg dataset only has one or three bands
     {
         if (bands < 4)//add transparency to files with one band or three bands
         {
@@ -84,11 +84,11 @@ void GenerateTiles(std::string filename,
         }
     }
 
-    int rowOffset = rysize/dysize;
-    int loopCount = rysize/rowOffset;
+    const int rowOffset = rysize/dysize;
+    const int loopCount = rysize/rowOffset;
     for (int row = 0; row < loopCount; row++)
     {
-        if (isJpegDriver == false)
+        if (!isJpegDriver)
         {
             for (int i = 0; i < dxsize; i++)
             {
@@ -99,36 +99,24 @@ void GenerateTiles(std::string filename,
         for (int band = 1; band <= bands; band++)
         {
             GDALRasterBand* poBand = poSrcDs->GetRasterBand(band);
-
             int hasNoData = 0;
-            bool isSigned = false;
-            double noDataValue = poBand->GetNoDataValue(&hasNoData);
+            const double noDataValue = poBand->GetNoDataValue(&hasNoData);
             const char* pixelType = poBand->GetMetadataItem("PIXELTYPE", "IMAGE_STRUCTURE");
-            if (pixelType)
-            {
-                if (strcmp(pixelType, "SIGNEDBYTE") == 0)
-                {
-                    isSigned = true; 
-                }
-            }
+            const bool isSigned = ( pixelType && (strcmp(pixelType, "SIGNEDBYTE") == 0) );
 
             int yOffset = ry + row * rowOffset;
-            bool bReadFailed = false;
-            if (poBand)
-            {
-                CPLErr errTest = 
-                    poBand->RasterIO( GF_Read, rx, yOffset, rxsize, rowOffset, pafScanline, dxsize, 1, GDT_Byte, 0, 0, NULL);
+            CPLErr errTest =
+                poBand->RasterIO( GF_Read, rx, yOffset, rxsize, rowOffset, pafScanline, dxsize, 1, GDT_Byte, 0, 0, NULL);
 
-                if ( errTest == CE_Failure )
-                {
-                    hasNoData = 1;
-                    bReadFailed = true;
-                }
+            const bool bReadFailed = ( errTest == CE_Failure );
+            if ( bReadFailed )
+            {
+                hasNoData = 1;
             }
 
 
             //fill the true or false for hadnoData array if the source data has nodata value
-            if (isJpegDriver == false)
+            if (!isJpegDriver)
             {
                 if (hasNoData == 1)
                 {
@@ -140,7 +128,7 @@ void GenerateTiles(std::string filename,
                         {
                             tmpv -= 128;
                         }
-                        if (tmpv == noDataValue || bReadFailed == true)
+                        if (tmpv == noDataValue || bReadFailed)
                         {
                             hadnoData[j] = true;
                         }
@@ -148,22 +136,22 @@ void GenerateTiles(std::string filename,
                 }
             }
 
-            if (bReadFailed == false)
+            if (!bReadFailed)
             {
                 GDALRasterBand* poBandtmp = poTmpDataset->GetRasterBand(band);
-                poBandtmp->RasterIO(GF_Write, 0, row, dxsize, 1, pafScanline, dxsize, 1, GDT_Byte, 
+                poBandtmp->RasterIO(GF_Write, 0, row, dxsize, 1, pafScanline, dxsize, 1, GDT_Byte,
                                     0, 0, NULL);
             }
-        } 
+        }
 
         //fill the values for alpha band
-        if (isJpegDriver == false)
+        if (!isJpegDriver)
         {
             if (alphaBand)
             {
                 for (int i = 0; i < dxsize; i++)
                 {
-                    if (hadnoData[i] == true)
+                    if (hadnoData[i])
                     {
                         pafScanline[i] = 0;
                     }
@@ -171,9 +159,9 @@ void GenerateTiles(std::string filename,
                     {
                         pafScanline[i] = 255;
                     }
-                }    
+                }
 
-                alphaBand->RasterIO(GF_Write, 0, row, dxsize, 1, pafScanline, dxsize, 1, GDT_Byte, 
+                alphaBand->RasterIO(GF_Write, 0, row, dxsize, 1, pafScanline, dxsize, 1, GDT_Byte,
                                     0, 0, NULL);
             }
         }

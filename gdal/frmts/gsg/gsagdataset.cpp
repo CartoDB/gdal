@@ -120,7 +120,7 @@ class GSAGRasterBand : public GDALPamRasterBand
     double dfMaxZ;
 
     vsi_l_offset *panLineOffset;
-	int nLastReadLine;
+    int nLastReadLine;
 
     double *padfRowMinZ;
     double *padfRowMaxZ;
@@ -165,15 +165,21 @@ bool AlmostEqual( double dfVal1, double dfVal2 )
 
 GSAGRasterBand::GSAGRasterBand( GSAGDataset *poDS, int nBand,
 				vsi_l_offset nDataStart ) :
+    dfMinX(0.0),
+    dfMaxX(0.0),
+    dfMinY(0.0),
+    dfMaxY(0.0),
+    dfMinZ(0.0),
+    dfMaxZ(0.0),
+    nLastReadLine(0),
     padfRowMinZ(NULL),
     padfRowMaxZ(NULL),
     nMinZRow(-1),
     nMaxZRow(-1)
-
 {
     this->poDS = poDS;
     this->nBand = nBand;
-    
+
     eDataType = GDT_Float64;
 
     nBlockXSize = poDS->GetRasterXSize();
@@ -300,11 +306,11 @@ CPLErr GSAGRasterBand::ScanForMinMaxZ()
 CPLErr GSAGRasterBand::IReadBlock( int nBlockXOff, int nBlockYOff,
 				   void * pImage )
 {
+    GSAGDataset *poGDS = (GSAGDataset *)poDS;
+    assert( poGDS != NULL );
+
     static size_t nMaxLineSize = 128;
     double *pdfImage = (double *)pImage;
-    GSAGDataset *poGDS = (GSAGDataset *)poDS;
-
-    assert( poGDS != NULL );
 
     if( nBlockYOff < 0 || nBlockYOff > nRasterYSize - 1 || nBlockXOff != 0 )
         return CE_Failure;
@@ -329,10 +335,7 @@ CPLErr GSAGRasterBand::IReadBlock( int nBlockXOff, int nBlockYOff,
         return CE_Failure;
     }
 
-    size_t nLineBufSize;
-    char *szLineBuf = NULL;
-    size_t nCharsRead;
-    size_t nCharsExamined = 0;
+    size_t nLineBufSize = nMaxLineSize;
     /* If we know the offsets, we can just read line directly */
     if( (nBlockYOff > 0) && ( panLineOffset[nBlockYOff-1] != 0 ) )
     {
@@ -340,12 +343,8 @@ CPLErr GSAGRasterBand::IReadBlock( int nBlockXOff, int nBlockYOff,
 	nLineBufSize = (size_t) (panLineOffset[nBlockYOff-1]
                                  - panLineOffset[nBlockYOff] + 1);
     }
-    else
-    {
-	nLineBufSize = nMaxLineSize;
-    }
 
-    szLineBuf = (char *)VSIMalloc( nLineBufSize );
+    char *szLineBuf = (char *)VSIMalloc( nLineBufSize );
     if( szLineBuf == NULL )
     {
 	CPLError( CE_Failure, CPLE_OutOfMemory,
@@ -353,7 +352,7 @@ CPLErr GSAGRasterBand::IReadBlock( int nBlockXOff, int nBlockYOff,
 	return CE_Failure;
     }
 
-    nCharsRead = VSIFReadL( szLineBuf, 1, nLineBufSize - 1, poGDS->fp );
+    size_t nCharsRead = VSIFReadL( szLineBuf, 1, nLineBufSize - 1, poGDS->fp );
     if( nCharsRead == 0 )
     {
 	VSIFree( szLineBuf );
@@ -364,6 +363,7 @@ CPLErr GSAGRasterBand::IReadBlock( int nBlockXOff, int nBlockYOff,
     }
     szLineBuf[nCharsRead] = '\0';
 
+    size_t nCharsExamined = 0;
     char *szStart = szLineBuf;
     char *szEnd = szStart;
     for( int iCell=0; iCell<nBlockXSize; szStart = szEnd )
@@ -508,7 +508,6 @@ CPLErr GSAGRasterBand::IReadBlock( int nBlockXOff, int nBlockYOff,
 	    }
 
 	    /* This is really the last value and has no tailing newline */
-	    szStart = szLineBuf;
 	    szEnd = szLineBuf + nCharsRead;
 	}
 
@@ -773,21 +772,21 @@ double GSAGRasterBand::GetMaximum( int *pbSuccess )
 /*                             GSAGDataset()                            */
 /************************************************************************/
 
-GSAGDataset::GSAGDataset( const char *pszEOL )
-
+GSAGDataset::GSAGDataset( const char *pszEOL ) :
+    fp(NULL),
+    nMinMaxZOffset(0)
 {
     if( pszEOL == NULL || EQUAL(pszEOL, "") )
     {
 	CPLDebug( "GSAG", "GSAGDataset() created with invalid EOL string.\n" );
-	this->szEOL[0] = '\x0D';
-	this->szEOL[1] = '\x0A';
-	this->szEOL[2] = '\0';
+	szEOL[0] = '\x0D';
+	szEOL[1] = '\x0A';
+	szEOL[2] = '\0';
+        return;
     }
-    else
-    {
-        strncpy(this->szEOL, pszEOL, sizeof(this->szEOL));
-	this->szEOL[sizeof(this->szEOL) - 1] = '\0';
-    }
+
+    strncpy(szEOL, pszEOL, sizeof(szEOL));
+    szEOL[sizeof(this->szEOL) - 1] = '\0';
 }
 
 /************************************************************************/
@@ -864,7 +863,7 @@ GDALDataset *GSAGDataset::Open( GDALOpenInfo * poOpenInfo )
 	delete poDS;
         return NULL;
     }
- 
+
 /* -------------------------------------------------------------------- */
 /*      Read the header.                                                */
 /* -------------------------------------------------------------------- */
@@ -881,7 +880,8 @@ GDALDataset *GSAGDataset::Open( GDALOpenInfo * poOpenInfo )
 	if( pabyHeader == NULL )
 	{
 	    CPLError( CE_Failure, CPLE_OutOfMemory,
-		      "Unable to open dataset, unable to header buffer.\n" );
+		      "Unable to open dataset, unable to malloc header buffer.\n" );
+            delete poDS;
 	    return NULL;
 	}
 
@@ -1152,9 +1152,8 @@ CPLErr GSAGDataset::SetGeoTransform( double *padfGeoTransform )
     /*if( padfGeoTransform[2] != 0.0 || padfGeoTransform[4] != 0.0
 	|| padfGeoTransform[1] < 0.0 || padfGeoTransform[5] < 0.0 )
 	eErr = GDALPamDataset::SetGeoTransform( padfGeoTransform );*/
-
-    if( eErr != CE_None )
-	return eErr;
+    // if( eErr != CE_None )
+    //     return eErr;
 
     double dfOldMinX = poGRB->dfMinX;
     double dfOldMaxX = poGRB->dfMaxX;

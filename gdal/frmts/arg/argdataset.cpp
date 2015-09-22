@@ -57,35 +57,35 @@ static float CPLNaN(void)
 
 /************************************************************************/
 /* ==================================================================== */
-/*				ARGDataset				                                */
+/*				ARGDataset                              */
 /* ==================================================================== */
 /************************************************************************/
 
 class ARGDataset : public RawDataset
 {
-        VSILFILE	*fpImage;	// image data file.
-    
-        double	adfGeoTransform[6];
-        char * pszFilename;
+        VSILFILE *fpImage;	// image data file.
+        double adfGeoTransform[6];
+        char *pszFilename;
 
     public:
         ARGDataset();
         ~ARGDataset();
 
         CPLErr 	GetGeoTransform( double * padfTransform );
-   
+
         static int Identify( GDALOpenInfo * );
         static GDALDataset *Open( GDALOpenInfo * );
-        static GDALDataset *CreateCopy( const char *, GDALDataset *, int, 
+        static GDALDataset *CreateCopy( const char *, GDALDataset *, int,
             char **, GDALProgressFunc, void *);
         virtual char ** GetFileList(void);
-}; 
+};
 
 /************************************************************************/
 /*                            ARGDataset()                              */
 /************************************************************************/
 
-ARGDataset::ARGDataset()
+ARGDataset::ARGDataset() :
+    fpImage(NULL), pszFilename(NULL)
 {
     adfGeoTransform[0] = 0.0;
     adfGeoTransform[1] = 1.0;
@@ -93,7 +93,6 @@ ARGDataset::ARGDataset()
     adfGeoTransform[3] = 0.0;
     adfGeoTransform[4] = 0.0;
     adfGeoTransform[5] = 1.0;
-    fpImage = NULL;
 }
 
 /************************************************************************/
@@ -238,9 +237,6 @@ int ARGDataset::Identify( GDALOpenInfo *poOpenInfo )
 /************************************************************************/
 GDALDataset *ARGDataset::Open( GDALOpenInfo * poOpenInfo )
 {
-    json_object * pJSONObject;
-    const char * pszJSONStr;
-    char * pszLayer;
     /***** items from the json metadata *****/
     GDALDataType eType = GDT_Unknown;
     double fXmin = 0.0;
@@ -258,7 +254,6 @@ GDALDataset *ARGDataset::Open( GDALOpenInfo * poOpenInfo )
     int nPixelOffset = 0;
     double fNoDataValue = NAN;
 
-    char * pszWKT = NULL;
     OGRSpatialReference oSRS;
     OGRErr nErr = OGRERR_NONE;
 
@@ -269,7 +264,7 @@ GDALDataset *ARGDataset::Open( GDALOpenInfo * poOpenInfo )
 /*      Check metadata settings in JSON.                                */
 /* -------------------------------------------------------------------- */
 
-    pJSONObject = GetJsonObject(poOpenInfo->pszFilename);
+    json_object *pJSONObject = GetJsonObject(poOpenInfo->pszFilename);
 
     if (pJSONObject == NULL) {
         CPLError(CE_Failure, CPLE_AppDefined, "Error parsing JSON.");
@@ -277,7 +272,7 @@ GDALDataset *ARGDataset::Open( GDALOpenInfo * poOpenInfo )
     }
 
     // get the type (always 'arg')
-    pszJSONStr = GetJsonValueStr(pJSONObject, "type");
+    const char *pszJSONStr = GetJsonValueStr(pJSONObject, "type");
     if (pszJSONStr == NULL ) {
         CPLError(CE_Failure, CPLE_AppDefined,
             "The ARG 'type' is missing from the JSON file.");
@@ -477,6 +472,7 @@ GDALDataset *ARGDataset::Open( GDALOpenInfo * poOpenInfo )
         }
     }
 
+    char *pszWKT = NULL;
     nErr = oSRS.exportToWkt(&pszWKT);
     if (nErr != OGRERR_NONE) {
         CPLError(CE_Failure, CPLE_AppDefined,
@@ -496,10 +492,11 @@ GDALDataset *ARGDataset::Open( GDALOpenInfo * poOpenInfo )
             "The ARG 'layer' is missing from the JSON file.");
         json_object_put(pJSONObject);
         pJSONObject = NULL;
+        CPLFree(pszWKT);
         return NULL;
     }
 
-    pszLayer = CPLStrdup(pszJSONStr);
+    char *pszLayer = CPLStrdup(pszJSONStr);
 
     // done with the json object now
     json_object_put(pJSONObject);

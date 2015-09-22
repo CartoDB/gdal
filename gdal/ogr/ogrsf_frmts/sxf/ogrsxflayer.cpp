@@ -68,22 +68,22 @@ OGRSXFLayer::OGRSXFLayer(VSILFILE* fp, CPLMutex** hIOMutex, GByte nID, const cha
     //oGeomFieldDefn.SetSpatialRef(stSXFMapDescription.pSpatRef);
     //poFeatureDefn->AddGeomFieldDefn(&oGeomFieldDefn);
 
-    OGRFieldDefn oFIDField = OGRFieldDefn(sFIDColumn_, OFTInteger);
+    OGRFieldDefn oFIDField(sFIDColumn_, OFTInteger);
     poFeatureDefn->AddFieldDefn(&oFIDField);
 
-    OGRFieldDefn oClCodeField = OGRFieldDefn( "CLCODE", OFTInteger );
+    OGRFieldDefn oClCodeField( "CLCODE", OFTInteger );
     oClCodeField.SetWidth(10);
     poFeatureDefn->AddFieldDefn( &oClCodeField );
 
-    OGRFieldDefn oClNameField = OGRFieldDefn( "CLNAME", OFTString );
+    OGRFieldDefn oClNameField( "CLNAME", OFTString );
     oClNameField.SetWidth(32);
     poFeatureDefn->AddFieldDefn( &oClNameField );
 
-    OGRFieldDefn oNumField = OGRFieldDefn( "OBJECTNUMB", OFTInteger );
+    OGRFieldDefn oNumField( "OBJECTNUMB", OFTInteger );
     oNumField.SetWidth(10);
     poFeatureDefn->AddFieldDefn( &oNumField );
 
-    OGRFieldDefn oAngField = OGRFieldDefn("ANGLE", OFTReal);
+    OGRFieldDefn oAngField("ANGLE", OFTReal);
     poFeatureDefn->AddFieldDefn(&oAngField);
 
     OGRFieldDefn  oTextField( "TEXT", OFTString );
@@ -1328,7 +1328,6 @@ OGRFeature *OGRSXFLayer::TranslatePolygon(const SXFRecordDescription& certifInfo
     double dfY = 1.0;
     double dfZ = 0.0;
     GUInt32 nOffset = 0;
-    GUInt32 count;
     GUInt32 nDelta = 0;
 
     OGRFeature *poFeature = new OGRFeature(poFeatureDefn);
@@ -1336,7 +1335,7 @@ OGRFeature *OGRSXFLayer::TranslatePolygon(const SXFRecordDescription& certifInfo
     OGRLineString* poLS = new OGRLineString();
 
 /*---------------------- Reading Primary Polygon --------------------------------*/
-    for(count=0 ; count <  certifInfo.nPointCount ; count++)
+    for(GUInt32 count=0 ; count <  certifInfo.nPointCount ; count++)
     {
         const char * psBuf = psRecordBuf + nOffset;
         if (certifInfo.bDim == 1)
@@ -1378,10 +1377,22 @@ OGRFeature *OGRSXFLayer::TranslatePolygon(const SXFRecordDescription& certifInfo
         memcpy(&nCoords, psRecordBuf + nOffset + 2, 2);
         CPL_LSBUINT16PTR(&nCoords);
 
+        // TODO: Is this really what the buffer size should be?
+        if (nCoords * nDelta != nBufLen - nOffset + 2  - 6)
+        {
+            CPLError(CE_Warning, CPLE_FileIO,
+                     "SXF raw feature size incorrect.  "
+                     "%d %d",
+                   nCoords * nDelta,
+                   nBufLen - nOffset + 2 - 6
+                   );
+            // TODO: How best to gracefully exit and report an issue?
+            // break; or cleanup and return NULL?
+        }
+
         nOffset +=4;
 
-        int i;
-        for (i=0; i < nCoords ; i++)
+        for (int i=0; i < nCoords ; i++)
         {
             const char * psCoords = psRecordBuf + nOffset ;
             if (certifInfo.bDim == 1)
@@ -1482,8 +1493,8 @@ OGRFeature *OGRSXFLayer::TranslateText(const SXFRecordDescription& certifInfo,
 
 
 /*****
- * TODO : 
- *          - Translate graphics 
+ * TODO :
+ *          - Translate graphics
  *          - Translate 3D vector
  */
 

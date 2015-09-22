@@ -79,9 +79,9 @@ static void    (*pfn_pj_ctx_free)( projCtx ) = NULL;
 
 // Locale-safe proj starts with 4.10
 #if defined(PJ_LOCALE_SAFE)
-static int      bProjLocaleSafe = PJ_LOCALE_SAFE;
+static bool      bProjLocaleSafe = PJ_LOCALE_SAFE;
 #else
-static int      bProjLocaleSafe = FALSE;
+static bool      bProjLocaleSafe = false;
 #endif
 
 #if (defined(WIN32) || defined(WIN32CE)) && !defined(__MINGW32__)
@@ -127,7 +127,6 @@ class OGRProj4CT : public OGRCoordinateTransformation
     double      dfSourceToRadians;
     int         bSourceWrap;
     double      dfSourceWrapLong;
-    
 
     OGRSpatialReference *poSRSTarget;
     void        *psPJTarget;
@@ -172,7 +171,6 @@ public:
     virtual int TransformEx( int nCount, 
                              double *x, double *y, double *z = NULL,
                              int *panSuccess = NULL );
-
 };
 
 /************************************************************************/
@@ -196,13 +194,13 @@ static const char* GetProjLibraryName()
 static int LoadProjLibrary_unlocked()
 
 {
-    static int  bTriedToLoad = FALSE;
+    static bool bTriedToLoad = false;
     const char *pszLibName;
-    
+
     if( bTriedToLoad )
         return( pfn_pj_transform != NULL );
 
-    bTriedToLoad = TRUE;
+    bTriedToLoad = true;
 
     pszLibName = GetProjLibraryName();
 
@@ -488,34 +486,18 @@ OCTNewCoordinateTransformation(
 /*                             OGRProj4CT()                             */
 /************************************************************************/
 
-OGRProj4CT::OGRProj4CT()
-
+OGRProj4CT::OGRProj4CT() :
+    poSRSSource(NULL), psPJSource(NULL), bSourceLatLong(FALSE),
+    dfSourceToRadians(0.0), bSourceWrap(FALSE), dfSourceWrapLong(0.0),
+    poSRSTarget(NULL), psPJTarget(NULL), bTargetLatLong(FALSE),
+    dfTargetFromRadians(0.0), bTargetWrap(FALSE), dfTargetWrapLong(0.0),
+    bIdentityTransform(FALSE), bWebMercatorToWGS84(FALSE), nErrorCount(0),
+    bCheckWithInvertProj(FALSE), dfThreshold(0.0), pjctx(NULL), nMaxCount(0),
+    padfOriX(NULL), padfOriY(NULL), padfOriZ(NULL), padfTargetX(NULL),
+    padfTargetY(NULL), padfTargetZ(NULL)
 {
-    poSRSSource = NULL;
-    poSRSTarget = NULL;
-    psPJSource = NULL;
-    psPJTarget = NULL;
-    
-    bIdentityTransform = FALSE;
-    //bWGS84ToWebMercator = FALSE;
-    bWebMercatorToWGS84 = FALSE;
-    nErrorCount = 0;
-    
-    bCheckWithInvertProj = FALSE;
-    dfThreshold = 0;
-
-    nMaxCount = 0;
-    padfOriX = NULL;
-    padfOriY = NULL;
-    padfOriZ = NULL;
-    padfTargetX = NULL;
-    padfTargetY = NULL;
-    padfTargetZ = NULL;
-
     if (pfn_pj_ctx_alloc != NULL)
         pjctx = pfn_pj_ctx_alloc();
-    else
-        pjctx = NULL;
 }
 
 /************************************************************************/
@@ -877,15 +859,17 @@ int OGRProj4CT::InitializeNoLock( OGRSpatialReference * poSourceIn,
     /* Determine if we really have a transformation to do */
     bIdentityTransform = (strcmp(pszSrcProj4Defn, pszDstProj4Defn) == 0);
 
+#if 0
     /* In case of identity transform, under the following conditions, */
-    /* we can also avoid transforming from deegrees <--> radians. */
+    /* we can also avoid transforming from degrees <--> radians. */
     if( bIdentityTransform && bSourceLatLong && !bSourceWrap &&
         bTargetLatLong && !bTargetWrap &&
-        abs(dfSourceToRadians * dfTargetFromRadians - 1.0) < 1e-10 )
+        fabs(dfSourceToRadians * dfTargetFromRadians - 1.0) < 1e-10 )
     {
         /*bSourceLatLong = FALSE;
         bTargetLatLong = FALSE;*/
     }
+#endif
 
     CPLFree( pszSrcProj4Defn );
     CPLFree( pszDstProj4Defn );
@@ -997,7 +981,7 @@ int OGRProj4CT::TransformEx( int nCount, double *x, double *y, double *z,
 /* -------------------------------------------------------------------- */
 /*      Optimized transform from WebMercator to WGS84                   */
 /* -------------------------------------------------------------------- */
-    int bTransformDone = FALSE;
+    bool bTransformDone = false;
     if( bWebMercatorToWGS84 )
     {
 #define REVERSE_SPHERE_RADIUS  (1. / 6378137.)
@@ -1050,10 +1034,10 @@ int OGRProj4CT::TransformEx( int nCount, double *x, double *y, double *z,
             }
         }
 
-        bTransformDone = TRUE;
+        bTransformDone = true;
     }
     else if( bIdentityTransform )
-        bTransformDone = TRUE;
+        bTransformDone = true;
 
 /* -------------------------------------------------------------------- */
 /*      Do the transformation (or not...) using PROJ.4.                 */
@@ -1227,4 +1211,3 @@ int CPL_STDCALL OCTTransformEx( OGRCoordinateTransformationH hTransform,
     return ((OGRCoordinateTransformation*) hTransform)->
         TransformEx( nCount, x, y, z, pabSuccess );
 }
-

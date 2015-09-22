@@ -152,7 +152,7 @@ OGRErr OSRImportFromPanorama( OGRSpatialReferenceH hSRS,
                               double *padfPrjParams )
 
 {
-    VALIDATE_POINTER1( hSRS, "OSRImportFromPanorama", CE_Failure );
+    VALIDATE_POINTER1( hSRS, "OSRImportFromPanorama", OGRERR_FAILURE );
 
     return ((OGRSpatialReference *) hSRS)->importFromPanorama( iProjSys,
                                                                iDatum,iEllips,
@@ -248,7 +248,7 @@ OGRErr OGRSpatialReference::importFromPanorama( long iProjSys, long iDatum,
 /* -------------------------------------------------------------------- */
 /*      Use safe defaults if projection parameters are not supplied.    */
 /* -------------------------------------------------------------------- */
-    int     bProjAllocated = FALSE;
+    int bProjAllocated = false;
 
     if( padfPrjParams == NULL )
     {
@@ -259,7 +259,7 @@ OGRErr OGRSpatialReference::importFromPanorama( long iProjSys, long iDatum,
             return OGRERR_NOT_ENOUGH_MEMORY;
         for ( i = 0; i < 7; i++ )
             padfPrjParams[i] = 0.0;
-        bProjAllocated = TRUE;
+        bProjAllocated = true;
     }
 
 /* -------------------------------------------------------------------- */
@@ -496,11 +496,11 @@ OGRErr OSRExportToPanorama( OGRSpatialReferenceH hSRS,
                             long *piZone, double *padfPrjParams )
 
 {
-    VALIDATE_POINTER1( hSRS, "OSRExportToPanorama", CE_Failure );
-    VALIDATE_POINTER1( piProjSys, "OSRExportToPanorama", CE_Failure );
-    VALIDATE_POINTER1( piDatum, "OSRExportToPanorama", CE_Failure );
-    VALIDATE_POINTER1( piEllips, "OSRExportToPanorama", CE_Failure );
-    VALIDATE_POINTER1( padfPrjParams, "OSRExportToPanorama", CE_Failure );
+    VALIDATE_POINTER1( hSRS, "OSRExportToPanorama", OGRERR_FAILURE );
+    VALIDATE_POINTER1( piProjSys, "OSRExportToPanorama", OGRERR_FAILURE );
+    VALIDATE_POINTER1( piDatum, "OSRExportToPanorama", OGRERR_FAILURE );
+    VALIDATE_POINTER1( piEllips, "OSRExportToPanorama", OGRERR_FAILURE );
+    VALIDATE_POINTER1( padfPrjParams, "OSRExportToPanorama", OGRERR_FAILURE );
 
     return ((OGRSpatialReference *) hSRS)->exportToPanorama( piProjSys,
                                                              piDatum, piEllips,
@@ -835,4 +835,3 @@ OGRErr OGRSpatialReference::exportToPanorama( long *piProjSys, long *piDatum,
 
     return OGRERR_NONE;
 }
-

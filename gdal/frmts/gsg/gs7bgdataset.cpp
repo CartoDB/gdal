@@ -91,6 +91,7 @@ class GS7BGDataset : public GDALPamDataset
     VSILFILE    *fp;
 
   public:
+    GS7BGDataset() : fp(NULL) { }
     ~GS7BGDataset();
 
     static int          Identify( GDALOpenInfo * );
@@ -108,6 +109,8 @@ class GS7BGDataset : public GDALPamDataset
     CPLErr GetGeoTransform( double *padfGeoTransform );
     CPLErr SetGeoTransform( double *padfGeoTransform );
 };
+
+
 
 /* NOTE:  This is not mentioned in the spec, but Surfer 8 uses this value */
 /* 0x7effffee (Little Endian: eeffff7e) */
@@ -166,6 +169,8 @@ class GS7BGRasterBand : public GDALPamRasterBand
 /************************************************************************/
 
 GS7BGRasterBand::GS7BGRasterBand( GS7BGDataset *poDS, int nBand ) :
+    dfMinX(0.0), dfMaxX(0.0), dfMinY(0.0), dfMaxY(0.0), dfMinZ(0.0),
+    dfMaxZ(0.0),
     pafRowMinZ(NULL),
     pafRowMaxZ(NULL),
     nMinZRow(-1),
@@ -707,6 +712,7 @@ GDALDataset *GS7BGDataset::Open( GDALOpenInfo * poOpenInfo )
     /*      Create band information objects.                               */
     /* --------------------------------------------------------------------*/
     GS7BGRasterBand *poBand = new GS7BGRasterBand( poDS, 1 );
+    poDS->SetBand( 1, poBand );
 
     // find the min X Value of the grid
     double dfTemp;
@@ -776,7 +782,6 @@ GDALDataset *GS7BGDataset::Open( GDALOpenInfo * poOpenInfo )
     }
     CPL_LSBPTR64( &dfTemp );
     poBand->dfMaxZ = dfTemp;
-    poDS->SetBand( 1, poBand );
 
     // read and ignore the rotation value
     //(This is not used in the current version).

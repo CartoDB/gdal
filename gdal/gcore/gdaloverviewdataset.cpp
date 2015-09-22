@@ -92,6 +92,9 @@ class GDALOverviewDataset : public GDALDataset
                                              const char * pszDomain = "" );
 
         virtual int        CloseDependentDatasets();
+
+  private:
+    CPL_DISALLOW_COPY_ASSIGN(GDALOverviewDataset);
 };
 
 /* ******************************************************************** */
@@ -114,6 +117,9 @@ class GDALOverviewBand : public GDALProxyRasterBand
 
         virtual int GetOverviewCount();
         virtual GDALRasterBand *GetOverview(int);
+
+  private:
+    CPL_DISALLOW_COPY_ASSIGN(GDALOverviewBand);
 };
 
 /************************************************************************/
@@ -526,7 +532,7 @@ GDALOverviewBand::~GDALOverviewBand()
 
 CPLErr GDALOverviewBand::FlushCache()
 {
-    if( ((GDALOverviewDataset*)poDS)->poMainDS )
+    if( poUnderlyingBand )
         return poUnderlyingBand->FlushCache();
     return CE_None;
 }
@@ -537,7 +543,7 @@ CPLErr GDALOverviewBand::FlushCache()
 
 GDALRasterBand* GDALOverviewBand::RefUnderlyingRasterBand()
 {
-    if( ((GDALOverviewDataset*)poDS)->poMainDS )
+    if( poUnderlyingBand )
         return poUnderlyingBand;
     else
         return NULL;

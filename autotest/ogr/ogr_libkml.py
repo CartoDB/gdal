@@ -402,7 +402,6 @@ def ogr_libkml_write(filename):
             print(dst_feat.GetGeometryRef().ExportToWkt())
             gdaltest.post_reason('CreateFeature changed the geometry.')
             return 'fail'
-        dst_feat.Destroy()
 
     lyr = ds.CreateLayer('test_wgs84')
 
@@ -421,58 +420,50 @@ def ogr_libkml_write(filename):
     if lyr.CreateFeature( dst_feat ) != 0:
         gdaltest.post_reason('CreateFeature failed.')
         return 'fail'
-    dst_feat.Destroy()
 
     dst_feat = ogr.Feature( lyr.GetLayerDefn() )
     dst_feat.SetGeometry(ogr.CreateGeometryFromWkt('POINT (2 49 1)'))
     if lyr.CreateFeature( dst_feat ) != 0:
         gdaltest.post_reason('CreateFeature failed.')
         return 'fail'
-    dst_feat.Destroy()
 
     dst_feat = ogr.Feature( lyr.GetLayerDefn() )
     dst_feat.SetGeometry(ogr.CreateGeometryFromWkt('LINESTRING (0 1,2 3)'))
     if lyr.CreateFeature( dst_feat ) != 0:
         gdaltest.post_reason('CreateFeature failed.')
         return 'fail'
-    dst_feat.Destroy()
 
     dst_feat = ogr.Feature( lyr.GetLayerDefn() )
     dst_feat.SetGeometry(ogr.CreateGeometryFromWkt('POLYGON ((0 0 0,0 1 0,1 1 0,1 0 0,0 0 0),(0.25 0.25 0,0.25 0.75 0,0.75 0.75 0,0.75 0.25 0,0.25 0.25 0))'))
     if lyr.CreateFeature( dst_feat ) != 0:
         gdaltest.post_reason('CreateFeature failed.')
         return 'fail'
-    dst_feat.Destroy()
 
     dst_feat = ogr.Feature( lyr.GetLayerDefn() )
     dst_feat.SetGeometry(ogr.CreateGeometryFromWkt('MULTIPOINT (2 49,2 49)'))
     if lyr.CreateFeature( dst_feat ) != 0:
         gdaltest.post_reason('CreateFeature failed.')
         return 'fail'
-    dst_feat.Destroy()
 
     dst_feat = ogr.Feature( lyr.GetLayerDefn() )
     dst_feat.SetGeometry(ogr.CreateGeometryFromWkt('MULTILINESTRING ((0 1,2 3),(0 1,2 3))'))
     if lyr.CreateFeature( dst_feat ) != 0:
         gdaltest.post_reason('CreateFeature failed.')
         return 'fail'
-    dst_feat.Destroy()
 
     dst_feat = ogr.Feature( lyr.GetLayerDefn() )
     dst_feat.SetGeometry(ogr.CreateGeometryFromWkt('MULTIPOLYGON (((0 0 0,0 1 0,1 1 0,1 0 0,0 0 0),(0.25 0.25 0,0.25 0.75 0,0.75 0.75 0,0.75 0.25 0,0.25 0.25 0)),((-0.25 0.25 0,-0.25 0.75 0,-0.75 0.75 0,-0.75 0.25 0,-0.25 0.25 0)))'))
     if lyr.CreateFeature( dst_feat ) != 0:
         gdaltest.post_reason('CreateFeature failed.')
         return 'fail'
-    dst_feat.Destroy()
 
     dst_feat = ogr.Feature( lyr.GetLayerDefn() )
     dst_feat.SetGeometry(ogr.CreateGeometryFromWkt('GEOMETRYCOLLECTION (POINT (2 49 1),LINESTRING (0 1,2 3))'))
     if lyr.CreateFeature( dst_feat ) != 0:
         gdaltest.post_reason('CreateFeature failed.')
         return 'fail'
-    dst_feat.Destroy()
 
-    ds.Destroy()
+    ds = None
 
     return 'success'
 
@@ -510,58 +501,50 @@ def ogr_libkml_check_write(filename):
         print(feat.GetGeometryRef().ExportToWkt())
         gdaltest.post_reason('Unexpected geometry.')
         return 'fail'
-    feat.Destroy()
 
     feat = lyr.GetNextFeature()
     if feat.GetGeometryRef().ExportToWkt() != 'POINT (2 49 1)':
         print(feat.GetGeometryRef().ExportToWkt())
         gdaltest.post_reason('Unexpected geometry.')
         return 'fail'
-    feat.Destroy()
 
     feat = lyr.GetNextFeature()
     if feat.GetGeometryRef().ExportToWkt() != 'LINESTRING (0 1 0,2 3 0)':
         print(feat.GetGeometryRef().ExportToWkt())
         gdaltest.post_reason('Unexpected geometry.')
         return 'fail'
-    feat.Destroy()
 
     feat = lyr.GetNextFeature()
     if feat.GetGeometryRef().ExportToWkt() != 'POLYGON ((0 0 0,0 1 0,1 1 0,1 0 0,0 0 0),(0.25 0.25 0,0.25 0.75 0,0.75 0.75 0,0.75 0.25 0,0.25 0.25 0))':
         print(feat.GetGeometryRef().ExportToWkt())
         gdaltest.post_reason('Unexpected geometry.')
         return 'fail'
-    feat.Destroy()
 
     feat = lyr.GetNextFeature()
     if feat.GetGeometryRef().ExportToWkt() != 'MULTIPOINT (2 49 0,2 49 0)':
         print(feat.GetGeometryRef().ExportToWkt())
         gdaltest.post_reason('Unexpected geometry.')
         return 'fail'
-    feat.Destroy()
 
     feat = lyr.GetNextFeature()
     if feat.GetGeometryRef().ExportToWkt() != 'MULTILINESTRING ((0 1 0,2 3 0),(0 1 0,2 3 0))':
         print(feat.GetGeometryRef().ExportToWkt())
         gdaltest.post_reason('Unexpected geometry.')
         return 'fail'
-    feat.Destroy()
 
     feat = lyr.GetNextFeature()
     if feat.GetGeometryRef().ExportToWkt() != 'MULTIPOLYGON (((0 0 0,0 1 0,1 1 0,1 0 0,0 0 0),(0.25 0.25 0,0.25 0.75 0,0.75 0.75 0,0.75 0.25 0,0.25 0.25 0)),((-0.25 0.25 0,-0.25 0.75 0,-0.75 0.75 0,-0.75 0.25 0,-0.25 0.25 0)))':
         print(feat.GetGeometryRef().ExportToWkt())
         gdaltest.post_reason('Unexpected geometry.')
         return 'fail'
-    feat.Destroy()
 
     feat = lyr.GetNextFeature()
     if feat.GetGeometryRef().ExportToWkt() != 'GEOMETRYCOLLECTION (POINT (2 49 1),LINESTRING (0 1 0,2 3 0))':
         print(feat.GetGeometryRef().ExportToWkt())
         gdaltest.post_reason('Unexpected geometry.')
         return 'fail'
-    feat.Destroy()
 
-    ds.Destroy()
+    ds = None
 
     return 'success'
 
@@ -619,8 +602,7 @@ def ogr_libkml_xml_attributes():
         print('got: %s ' % feat.GetField('description'))
         return 'fail'
 
-    feat.Destroy()
-    ds.Destroy()
+    ds = None
 
     return 'success'
 
@@ -637,10 +619,9 @@ def ogr_libkml_read_geometries():
     lyr = ds.GetLayer(0)
     feat = lyr.GetNextFeature()
     while feat is not None:
-        feat.Destroy()
         feat = lyr.GetNextFeature()
 
-    ds.Destroy()
+    ds = None
 
     return 'success'
 
@@ -869,8 +850,9 @@ def ogr_libkml_camera():
     dst_feat.SetField("heading", 70)
     dst_feat.SetField("tilt", 75)
     dst_feat.SetField("roll", 10)
-    lyr.CreateFeature( dst_feat )
-    
+    with gdaltest.error_handler():
+        lyr.CreateFeature( dst_feat )
+
     dst_feat = ogr.Feature( lyr.GetLayerDefn() )
     dst_feat.SetGeometry(ogr.CreateGeometryFromWkt('POINT (3 50 1)'))
     dst_feat.SetField("heading", -70)
@@ -899,20 +881,20 @@ def ogr_libkml_camera():
     lyr = ds.GetLayer(0)
 
     feat = lyr.GetNextFeature()
-    if feat.GetGeometryRef().ExportToWkt() != 'POINT (2 49 0)' or \
-       feat.GetField("heading") != 70.0 or \
-       feat.GetField("tilt") != 75.0 or \
-       feat.GetField("roll") != 10.0:
+    if (feat.GetGeometryRef().ExportToWkt() != 'POINT (2 49 0)' or
+        feat.GetField("heading") != 70.0 or
+        feat.GetField("tilt") != 75.0 or
+        feat.GetField("roll") != 10.0):
         feat.DumpReadable()
         gdaltest.post_reason('failure')
         return 'fail'
 
     feat = lyr.GetNextFeature()
-    if feat.GetGeometryRef().ExportToWkt() != 'POINT (3 50 1)' or \
-       feat.GetField("heading") != -70.0 or \
-       feat.IsFieldSet("tilt") or \
-       feat.IsFieldSet("roll") or \
-       feat.GetField("altitudeMode") != 'relativeToGround':
+    if (feat.GetGeometryRef().ExportToWkt() != 'POINT (3 50 1)' or
+        feat.GetField("heading") != -70.0 or
+        feat.IsFieldSet("tilt") or
+        feat.IsFieldSet("roll") or
+        feat.GetField("altitudeMode") != 'relativeToGround'):
         feat.DumpReadable()
         gdaltest.post_reason('failure')
         return 'fail'
@@ -1014,10 +996,11 @@ def ogr_libkml_write_multigeometry():
     feat = ogr.Feature(lyr.GetLayerDefn())
     # Warning emitted per ATC 66
     feat.SetGeometry(ogr.CreateGeometryFromWkt('MULTIPOINT EMPTY'))
-    lyr.CreateFeature(feat)
+    with gdaltest.error_handler():
+        lyr.CreateFeature(feat)
 
     ds = None
-    
+
     ds = ogr.Open("/vsimem/ogr_libkml_write_multigeometry.kml")
     lyr = ds.GetLayer(0)
     feat = lyr.GetNextFeature()
@@ -1082,11 +1065,15 @@ def ogr_libkml_write_atom_author():
     if not ogrtest.have_read_libkml:
         return 'skip'
 
-    ds = ogr.GetDriverByName('LIBKML').CreateDataSource("/vsimem/ogr_libkml_write_atom_author.kml",
+    filepath = '/vsimem/ogr_libkml_write_atom_author.kml'
+    ds = ogr.GetDriverByName('LIBKML').CreateDataSource(filepath,
                                                         options = ['author_name=name', 'author_uri=http://foo', 'author_email=foo@bar.com'])
-    del ds
+    if ds is None:
+        gdaltest.post_reason('Unable to create %s.' % filepath)
+        return 'fail'
+    ds = None
 
-    f = gdal.VSIFOpenL('/vsimem/ogr_libkml_write_atom_author.kml', 'rb')
+    f = gdal.VSIFOpenL(filepath, 'rb')
     data = gdal.VSIFReadL(1, 2048, f)
     data = data.decode('ascii')
     gdal.VSIFCloseL(f)
@@ -1096,7 +1083,7 @@ def ogr_libkml_write_atom_author():
        data.find('<atom:uri>http://foo</atom:uri>') == -1 or \
        data.find('<atom:email>foo@bar.com</atom:email>') == -1:
         print(data)
-        gdaltest.post_reason('failure')
+        gdaltest.post_reason('failure to find an atom string')
         return 'fail'
 
     return 'success'
@@ -1109,11 +1096,15 @@ def ogr_libkml_write_atom_link():
     if not ogrtest.have_read_libkml:
         return 'skip'
 
-    ds = ogr.GetDriverByName('LIBKML').CreateDataSource("/vsimem/ogr_libkml_write_atom_link.kml",
+    filepath = '/vsimem/ogr_libkml_write_atom_link.kml'
+    ds = ogr.GetDriverByName('LIBKML').CreateDataSource(filepath,
                                                         options = ['link=http://foo'])
-    del ds
+    if ds is None:
+        gdaltest.post_reason('Unable to create %s.' % filepath)
+        return 'fail'
+    ds = None
 
-    f = gdal.VSIFOpenL('/vsimem/ogr_libkml_write_atom_link.kml', 'rb')
+    f = gdal.VSIFOpenL(filepath, 'rb')
     data = gdal.VSIFReadL(1, 2048, f)
     data = data.decode('ascii')
     gdal.VSIFCloseL(f)
@@ -1134,11 +1125,15 @@ def ogr_libkml_write_phonenumber():
     if not ogrtest.have_read_libkml:
         return 'skip'
 
-    ds = ogr.GetDriverByName('LIBKML').CreateDataSource("/vsimem/ogr_libkml_write_phonenumber.kml",
+    filepath = '/vsimem/ogr_libkml_write_phonenumber.kml'
+    ds = ogr.GetDriverByName('LIBKML').CreateDataSource(filepath,
                                                         options = ['phonenumber=tel:911'])
-    del ds
+    if ds is None:
+        gdaltest.post_reason('Unable to create %s.' % filepath)
+        return 'fail'
+    ds = None
 
-    f = gdal.VSIFOpenL('/vsimem/ogr_libkml_write_phonenumber.kml', 'rb')
+    f = gdal.VSIFOpenL(filepath, 'rb')
     data = gdal.VSIFReadL(1, 2048, f)
     data = data.decode('ascii')
     gdal.VSIFCloseL(f)
@@ -1167,7 +1162,7 @@ def ogr_libkml_write_region():
         'REGION_XMAX=180', 'REGION_YMIN=-90', 'REGION_YMAX=90', \
         'REGION_MIN_LOD_PIXELS=128', 'REGION_MAX_LOD_PIXELS=10000000', \
         'REGION_MIN_FADE_EXTENT=1', 'REGION_MAX_FADE_EXTENT=2' ])
-    del ds
+    ds = None
 
     f = gdal.VSIFOpenL('/vsimem/ogr_libkml_write_region.kml', 'rb')
     data = gdal.VSIFReadL(1, 2048, f)
@@ -1594,7 +1589,8 @@ def ogr_libkml_write_update():
                                                             options = [ 'UPDATE_TARGETHREF=http://foo'] )
         lyr = ds.CreateLayer('layer_to_edit')
         feat = ogr.Feature(lyr.GetLayerDefn())
-        lyr.CreateFeature(feat)
+        with gdaltest.error_handler():
+            lyr.CreateFeature(feat)
         feat.SetFID(10)
         lyr.CreateFeature(feat)
         feat.SetFID(2)
@@ -1609,7 +1605,7 @@ def ogr_libkml_write_update():
         else:
             f = gdal.VSIFOpenL('/vsimem/ogr_libkml_write_update_dir/doc.kml', 'rb')
         if f is None:
-            gdaltest.post_reason('failure')
+            gdaltest.post_reason('Unable to open the write_update file.')
             return 'fail'
         data = gdal.VSIFReadL(1, 2048, f)
         data = data.decode('ascii')
@@ -1659,7 +1655,10 @@ def ogr_libkml_write_networklinkcontrol():
             name = "/vsimem/ogr_libkml_write_networklinkcontrol_dir"
 
         ds = ogr.GetDriverByName('LIBKML').CreateDataSource(name, options = options)
-        del ds
+        if ds is None:
+            gdaltest.post_reason('Unable to create %s.' % name)
+            return 'fail'
+        ds = None
 
         if i == 0:
             f = gdal.VSIFOpenL('/vsimem/ogr_libkml_write_networklinkcontrol.kml', 'rb')
@@ -1703,8 +1702,9 @@ def ogr_libkml_write_liststyle():
     ds.CreateLayer('test_radioFolder', options = [ 'LISTSTYLE_TYPE=radioFolder'] )
     ds.CreateLayer('test_checkOffOnly', options = [ 'LISTSTYLE_TYPE=checkOffOnly'] )
     ds.CreateLayer('test_checkHideChildren', options = [ 'LISTSTYLE_TYPE=checkHideChildren'] )
-    ds.CreateLayer('test_error', options = [ 'LISTSTYLE_TYPE=error'] )
-    del ds
+    with gdaltest.error_handler():
+        ds.CreateLayer('test_error', options = [ 'LISTSTYLE_TYPE=error'] )
+        ds = None
 
     f = gdal.VSIFOpenL('/vsimem/ogr_libkml_write_liststyle.kml', 'rb')
     data = gdal.VSIFReadL(1, 2048, f)
@@ -1935,7 +1935,7 @@ def ogr_libkml_write_folder():
     ds = ogr.GetDriverByName('LIBKML').CreateDataSource("/vsimem/ogr_libkml_write_folder.kml")
     ds.CreateLayer('test', options = [ 'LISTSTYLE_ICON_HREF=http://foo', 'FOLDER=YES' ] )
     ds.CreateLayer('test2', options = [ 'FOLDER=YES' ] )
-    del ds
+    ds = None
 
     f = gdal.VSIFOpenL('/vsimem/ogr_libkml_write_folder.kml', 'rb')
     data = gdal.VSIFReadL(1, 2048, f)
@@ -1964,7 +1964,7 @@ def ogr_libkml_write_container_properties():
     ds = ogr.GetDriverByName('LIBKML').CreateDataSource("/vsimem/ogr_libkml_write_container_properties.kml",
                                  options = [ 'NAME=ds_name', 'DESCRIPTION=ds_description', 'OPEN=1', 'VISIBILITY=1', 'SNIPPET=ds_snippet'])
     ds.CreateLayer('test', options = [ 'NAME=lyr_name', 'DESCRIPTION=lyr_description', 'OPEN=0', 'VISIBILITY=0', 'SNIPPET=lyr_snippet'] )
-    del ds
+    ds = None
 
     f = gdal.VSIFOpenL('/vsimem/ogr_libkml_write_container_properties.kml', 'rb')
     data = gdal.VSIFReadL(1, 2048, f)
@@ -1995,7 +1995,7 @@ def ogr_libkml_cleanup():
         return 'skip'
 
     if ogrtest.kml_ds is not None:
-        ogrtest.kml_ds.Destroy()
+        ogrtest.kml_ds = None
 
     gdal.Unlink('/vsimem/libkml.kml')
     gdal.Unlink('/vsimem/libkml.kmz')
@@ -2094,4 +2094,3 @@ if __name__ == '__main__':
     gdaltest.run_tests( gdaltest_list )
 
     gdaltest.summarize()
-

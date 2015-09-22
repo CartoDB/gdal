@@ -400,7 +400,6 @@ def ogr_kml_write_1():
         print(dst_feat.GetGeometryRef().ExportToWkt())
         gdaltest.post_reason('CreateFeature changed the geometry.')
         return 'fail'
-    dst_feat.Destroy()
 
     lyr = ds.CreateLayer('test_wgs84')
 
@@ -411,58 +410,50 @@ def ogr_kml_write_1():
     if lyr.CreateFeature( dst_feat ) != 0:
         gdaltest.post_reason('CreateFeature failed.')
         return 'fail'
-    dst_feat.Destroy()
 
     dst_feat = ogr.Feature( lyr.GetLayerDefn() )
     dst_feat.SetGeometry(ogr.CreateGeometryFromWkt('POINT (2 49 1)'))
     if lyr.CreateFeature( dst_feat ) != 0:
         gdaltest.post_reason('CreateFeature failed.')
         return 'fail'
-    dst_feat.Destroy()
 
     dst_feat = ogr.Feature( lyr.GetLayerDefn() )
     dst_feat.SetGeometry(ogr.CreateGeometryFromWkt('LINESTRING (0 1,2 3)'))
     if lyr.CreateFeature( dst_feat ) != 0:
         gdaltest.post_reason('CreateFeature failed.')
         return 'fail'
-    dst_feat.Destroy()
 
     dst_feat = ogr.Feature( lyr.GetLayerDefn() )
     dst_feat.SetGeometry(ogr.CreateGeometryFromWkt('POLYGON ((0 1,2 3,4 5,0 1),(0 1,2 3,4 5,0 1))'))
     if lyr.CreateFeature( dst_feat ) != 0:
         gdaltest.post_reason('CreateFeature failed.')
         return 'fail'
-    dst_feat.Destroy()
 
     dst_feat = ogr.Feature( lyr.GetLayerDefn() )
     dst_feat.SetGeometry(ogr.CreateGeometryFromWkt('MULTIPOINT (2 49,2 49)'))
     if lyr.CreateFeature( dst_feat ) != 0:
         gdaltest.post_reason('CreateFeature failed.')
         return 'fail'
-    dst_feat.Destroy()
 
     dst_feat = ogr.Feature( lyr.GetLayerDefn() )
     dst_feat.SetGeometry(ogr.CreateGeometryFromWkt('MULTILINESTRING ((0 1,2 3),(0 1,2 3))'))
     if lyr.CreateFeature( dst_feat ) != 0:
         gdaltest.post_reason('CreateFeature failed.')
         return 'fail'
-    dst_feat.Destroy()
 
     dst_feat = ogr.Feature( lyr.GetLayerDefn() )
     dst_feat.SetGeometry(ogr.CreateGeometryFromWkt('MULTIPOLYGON (((0 1,2 3,4 5,0 1),(0 1,2 3,4 5,0 1)),((0 1,2 3,4 5,0 1),(0 1,2 3,4 5,0 1)))'))
     if lyr.CreateFeature( dst_feat ) != 0:
         gdaltest.post_reason('CreateFeature failed.')
         return 'fail'
-    dst_feat.Destroy()
 
     dst_feat = ogr.Feature( lyr.GetLayerDefn() )
     dst_feat.SetGeometry(ogr.CreateGeometryFromWkt('GEOMETRYCOLLECTION (POINT (2 49 1),LINESTRING (0 1 0,2 3 0))'))
     if lyr.CreateFeature( dst_feat ) != 0:
         gdaltest.post_reason('CreateFeature failed.')
         return 'fail'
-    dst_feat.Destroy()
 
-    ds.Destroy()
+    ds = None
 
     return 'success'
 
@@ -475,12 +466,10 @@ def ogr_kml_check_write_1():
     if not ogrtest.have_read_kml:
         return 'skip'
 
-    f = open('tmp/kml.kml')
-    content = f.read()
-    f.close()
+    content = open('tmp/kml.kml').read()
     if content.find('Schema') >= 0:
         gdaltest.post_reason('Did not expect Schema tags.')
-        return 'fail' 
+        return 'fail'
 
     ds = ogr.Open('tmp/kml.kml')
     lyr = ds.GetLayerByName('test_wgs84')
@@ -501,58 +490,48 @@ def ogr_kml_check_write_1():
         print(feat.GetGeometryRef().ExportToWkt())
         gdaltest.post_reason('Unexpected geometry.')
         return 'fail'
-    feat.Destroy()
 
     feat = lyr.GetNextFeature()
     if feat.GetGeometryRef().ExportToWkt() != 'POINT (2 49 1)':
         print(feat.GetGeometryRef().ExportToWkt())
         gdaltest.post_reason('Unexpected geometry.')
         return 'fail'
-    feat.Destroy()
 
     feat = lyr.GetNextFeature()
     if feat.GetGeometryRef().ExportToWkt() != 'LINESTRING (0 1,2 3)':
         print(feat.GetGeometryRef().ExportToWkt())
         gdaltest.post_reason('Unexpected geometry.')
         return 'fail'
-    feat.Destroy()
 
     feat = lyr.GetNextFeature()
     if feat.GetGeometryRef().ExportToWkt() != 'POLYGON ((0 1,2 3,4 5,0 1),(0 1,2 3,4 5,0 1))':
         print(feat.GetGeometryRef().ExportToWkt())
         gdaltest.post_reason('Unexpected geometry.')
         return 'fail'
-    feat.Destroy()
 
     feat = lyr.GetNextFeature()
     if feat.GetGeometryRef().ExportToWkt() != 'MULTIPOINT (2 49,2 49)':
         print(feat.GetGeometryRef().ExportToWkt())
         gdaltest.post_reason('Unexpected geometry.')
         return 'fail'
-    feat.Destroy()
 
     feat = lyr.GetNextFeature()
     if feat.GetGeometryRef().ExportToWkt() != 'MULTILINESTRING ((0 1,2 3),(0 1,2 3))':
         print(feat.GetGeometryRef().ExportToWkt())
         gdaltest.post_reason('Unexpected geometry.')
         return 'fail'
-    feat.Destroy()
 
     feat = lyr.GetNextFeature()
     if feat.GetGeometryRef().ExportToWkt() != 'MULTIPOLYGON (((0 1,2 3,4 5,0 1),(0 1,2 3,4 5,0 1)),((0 1,2 3,4 5,0 1),(0 1,2 3,4 5,0 1)))':
         print(feat.GetGeometryRef().ExportToWkt())
         gdaltest.post_reason('Unexpected geometry.')
         return 'fail'
-    feat.Destroy()
 
     feat = lyr.GetNextFeature()
     if feat.GetGeometryRef().ExportToWkt() != 'GEOMETRYCOLLECTION (POINT (2 49 1),LINESTRING (0 1 0,2 3 0))':
         print(feat.GetGeometryRef().ExportToWkt())
         gdaltest.post_reason('Unexpected geometry.')
         return 'fail'
-    feat.Destroy()
-
-    ds.Destroy()
 
     return 'success'
 
@@ -574,15 +553,12 @@ def ogr_kml_xml_attributes():
         gdaltest.post_reason( 'Wrong description field value' )
         print('got: ', feat.GetField('description'))
         return 'fail'
-        
-    feat.Destroy()
-    ds.Destroy()
 
     return 'success'
 
 ###############################################################################
 # Test reading all geometry types (#3558)
-#
+
 def ogr_kml_read_geometries():
 
     if not ogrtest.have_read_kml:
@@ -593,10 +569,7 @@ def ogr_kml_read_geometries():
     lyr = ds.GetLayer(0)
     feat = lyr.GetNextFeature()
     while feat is not None:
-        feat.Destroy()
         feat = lyr.GetNextFeature()
-
-    ds.Destroy()
 
     return 'success'
 
@@ -629,7 +602,8 @@ def ogr_kml_interleaved_writing():
     lyr1 = ds.CreateLayer("lyr1")
     ds.CreateLayer("lyr2")
     feat = ogr.Feature(lyr1.GetLayerDefn())
-    ret = lyr1.CreateFeature(feat)
+    with gdaltest.error_handler():
+        ret = lyr1.CreateFeature(feat)
     ds = None
 
     gdal.Unlink('/vsimem/ogr_kml_interleaved_writing.kml')
@@ -654,8 +628,6 @@ def ogr_kml_read_placemark():
     if feat is None:
         return 'fail'
 
-    ds = None
-
     return 'success'
 
 ###############################################################################
@@ -671,8 +643,6 @@ def ogr_kml_read_empty():
         gdaltest.post_reason('failed')
         print(ds.GetLayerCount())
         return 'fail'
-
-    ds = None
 
     return 'success'
 
@@ -699,8 +669,6 @@ def ogr_kml_read_emptylayers():
         gdaltest.post_reason('failed')
         print(ds.GetLayer(1).GetFeatureCount())
         return 'fail'
-
-    ds = None
 
     return 'success'
 
@@ -773,7 +741,7 @@ def ogr_kml_empty_layer():
 
     ds = ogr.GetDriverByName('KML').CreateDataSource('/vsimem/ogr_kml_empty_layer.kml')
     ds.CreateLayer("empty")
-    del ds
+    ds = None
 
     f = gdal.VSIFOpenL('/vsimem/ogr_kml_empty_layer.kml', 'rb')
     content = gdal.VSIFReadL(1,1000,f).decode('ascii')
@@ -796,7 +764,7 @@ def ogr_kml_empty_layer():
 def ogr_kml_two_layers():
 
     ds = ogr.GetDriverByName('KML').CreateDataSource('/vsimem/ogr_kml_two_layers.kml')
-    lyr = ds.CreateLayer("empty")
+    ds.CreateLayer("empty")
     lyr = ds.CreateLayer("lyr")
     lyr.CreateField(ogr.FieldDefn("foo", ogr.OFTString))
     feat = ogr.Feature(lyr.GetLayerDefn())
@@ -834,12 +802,14 @@ def ogr_kml_two_layers():
 #  Cleanup
 
 def ogr_kml_cleanup():
+
+    os.remove('tmp/kml.kml')
+
     if not ogrtest.have_read_kml:
         return 'skip'
 
     if ogrtest.kml_ds is not None:
-        ogrtest.kml_ds.Destroy()
-    os.remove('tmp/kml.kml')
+        ogrtest.kml_ds = None
 
     # Re-register LIBKML driver if necessary
     if ogrtest.libkml_drv is not None:
@@ -881,4 +851,3 @@ if __name__ == '__main__':
     gdaltest.run_tests( gdaltest_list )
 
     gdaltest.summarize()
-

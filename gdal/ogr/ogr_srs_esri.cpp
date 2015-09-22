@@ -487,7 +487,7 @@ static void InitDatumMappingTable()
 OGRErr OSRImportFromESRI( OGRSpatialReferenceH hSRS, char **papszPrj )
 
 {
-    VALIDATE_POINTER1( hSRS, "OSRImportFromESRI", CE_Failure );
+    VALIDATE_POINTER1( hSRS, "OSRImportFromESRI", OGRERR_FAILURE );
 
     return ((OGRSpatialReference *) hSRS)->importFromESRI( papszPrj );
 }
@@ -834,7 +834,6 @@ OGRErr OGRSpatialReference::importFromESRI( char **papszPrj )
     {
        // This is EPSG:3875 Pseudo Mercator. We might as well import it from
        // the EPSG spec.
-       CPLString osAuxiliarySphereType;
        importFromEPSG(3857);
     }
 
@@ -983,6 +982,22 @@ OGRErr OGRSpatialReference::morphToESRI()
 
 {
     OGRErr      eErr;
+
+/* -------------------------------------------------------------------- */
+/*      Special case for EPSG:3857. Hard to deal with in the general    */
+/*      case as GDAL (at the time of writing) uses regular Mercator_1SP */
+/*      to model it.                                                    */
+/* -------------------------------------------------------------------- */
+    const char* pszAuthName = GetAuthorityName(NULL);
+    const char* pszAuthCode = GetAuthorityCode(NULL);
+    if( (pszAuthName != NULL && EQUAL(pszAuthName,"EPSG") && pszAuthCode != NULL &&
+         atoi(pszAuthCode) == 3857) ||
+        (GetAttrValue("PROJCS") != NULL && EQUAL(GetAttrValue("PROJCS"), "WGS 84 / Pseudo-Mercator")) )
+    {
+        Clear();
+        const char* pszESRI_PE_WebMercator = "PROJCS[\"WGS_1984_Web_Mercator_Auxiliary_Sphere\",GEOGCS[\"GCS_WGS_1984\",DATUM[\"D_WGS_1984\",SPHEROID[\"WGS_1984\",6378137.0,298.257223563]],PRIMEM[\"Greenwich\",0.0],UNIT[\"Degree\",0.0174532925199433]],PROJECTION[\"Mercator_Auxiliary_Sphere\"],PARAMETER[\"False_Easting\",0.0],PARAMETER[\"False_Northing\",0.0],PARAMETER[\"Central_Meridian\",0.0],PARAMETER[\"Standard_Parallel_1\",0.0],PARAMETER[\"Auxiliary_Sphere_Type\",0.0],UNIT[\"Meter\",1.0]]";
+        return importFromWkt( (char**) &pszESRI_PE_WebMercator );
+    }
 
 /* -------------------------------------------------------------------- */
 /*      Fixup ordering, missing linear units, etc.                      */
@@ -1488,7 +1503,7 @@ OGRErr OGRSpatialReference::morphToESRI()
 OGRErr OSRMorphToESRI( OGRSpatialReferenceH hSRS )
 
 {
-    VALIDATE_POINTER1( hSRS, "OSRMorphToESRI", CE_Failure );
+    VALIDATE_POINTER1( hSRS, "OSRMorphToESRI", OGRERR_FAILURE );
 
     return ((OGRSpatialReference *) hSRS)->morphToESRI();
 }
@@ -1612,6 +1627,13 @@ OGRErr OGRSpatialReference::morphFromESRI()
                      SRS_PT_LAMBERT_CONFORMAL_CONIC_1SP );
 
         pszProjection = GetAttrValue("PROJECTION");
+    }
+
+    if( pszProjection != NULL &&
+             EQUAL(pszProjection, SRS_PT_MERCATOR_AUXILIARY_SPHERE) )
+    {
+        CPLFree( pszDatumOrig );
+        return importFromEPSG(3857);
     }
 
 /* -------------------------------------------------------------------- */
@@ -1753,7 +1775,7 @@ OGRErr OGRSpatialReference::morphFromESRI()
 /*      Peru96 DATUM, but in ESRI world, both Peru96 and SIRGAS-Chile   */
 /*      are translated as D_SIRGAS-Chile.                               */
 /* -------------------------------------------------------------------- */
-    int bPeru96Datum = FALSE;
+    bool bPeru96Datum = false;
     if( poDatum != NULL && EQUAL(poDatum->GetValue(), "SIRGAS_Chile") )
     {
         const char* pszSRSName = GetAttrValue("PROJCS");
@@ -1761,7 +1783,7 @@ OGRErr OGRSpatialReference::morphFromESRI()
             pszSRSName = GetAttrValue("GEOGCS");
         if( strstr(pszSRSName, "Peru96") )
         {
-            bPeru96Datum = TRUE;
+            bPeru96Datum = true;
             poDatum->SetValue( "Peru96" );
         }
     }
@@ -1819,7 +1841,7 @@ OGRErr OGRSpatialReference::morphFromESRI()
                         {                        
                             /* make clone of GEOGCS and strip CT parms for testing */
                             OGRSpatialReference *poSRSTemp2 = NULL;
-                            int bIsSame = FALSE;
+                            bool bIsSame = false;
                             char *pszOtherValue = NULL;
                             double dfThisValue, dfOtherValue;
                             OGR_SRSNode *poNode = NULL;
@@ -1856,20 +1878,20 @@ OGRErr OGRSpatialReference::morphFromESRI()
                                    but different spheroids (e.g. EPSG:4618 and EPSG:4291) - see bug #4345 */
                                 /* instead of testing for matching SPHEROID name (which can be error-prone), test
                                    for matching parameters (semi-major and inverse flattening ) - see bug #4673 */
-                                bIsSame = TRUE;
+                                bIsSame = true;
                                 dfThisValue = this->GetSemiMajor();
                                 dfOtherValue = oSRSTemp.GetSemiMajor();
                                 if ( ABS( dfThisValue - dfOtherValue ) > 0.01 )
-                                    bIsSame = FALSE;
-                                CPLDebug( "OGR_ESRI", 
-                                          "morphFromESRI() SemiMajor: this = %.15g other = %.15g", 
+                                    bIsSame = false;
+                                CPLDebug( "OGR_ESRI",
+                                          "morphFromESRI() SemiMajor: this = %.15g other = %.15g",
                                           dfThisValue, dfOtherValue );
                                 dfThisValue = this->GetInvFlattening();
                                 dfOtherValue = oSRSTemp.GetInvFlattening();
                                 if ( ABS( dfThisValue - dfOtherValue ) > 0.0001 )
-                                    bIsSame = FALSE;
-                                CPLDebug( "OGR_ESRI", 
-                                          "morphFromESRI() InvFlattening: this = %g other = %g", 
+                                    bIsSame = false;
+                                CPLDebug( "OGR_ESRI",
+                                          "morphFromESRI() InvFlattening: this = %g other = %g",
                                           dfThisValue, dfOtherValue );
 
                                 if ( bIsSame )
@@ -1884,7 +1906,7 @@ OGRErr OGRSpatialReference::morphFromESRI()
                                               "morphFromESRI() PRIMEM: this = %.15g other = %.15g", 
                                               dfThisValue, dfOtherValue );
                                     if ( ABS( dfThisValue - dfOtherValue ) > 0.0001 )
-                                        bIsSame = FALSE;
+                                        bIsSame = false;
                                 }
                 
                                 /* found a matching spheroid */ 
@@ -1951,7 +1973,7 @@ OGRErr OGRSpatialReference::morphFromESRI()
 OGRErr OSRMorphFromESRI( OGRSpatialReferenceH hSRS )
 
 {
-    VALIDATE_POINTER1( hSRS, "OSRMorphFromESRI", CE_Failure );
+    VALIDATE_POINTER1( hSRS, "OSRMorphFromESRI", OGRERR_FAILURE );
 
     return ((OGRSpatialReference *) hSRS)->morphFromESRI();
 }
@@ -2316,9 +2338,6 @@ int RemapGeogCSName( OGRSpatialReference* pOgr, const char *pszGeogCSName )
 
 OGRErr OGRSpatialReference::ImportFromESRIStatePlaneWKT(  int code, const char* datumName, const char* unitsName, int pcsCode, const char* csName )
 {
-    int i;
-    long searchCode = -1;
-
     /* if the CS name is known */
     if (code == 0 && !datumName && !unitsName && pcsCode == 32767 && csName)
     {
@@ -2328,26 +2347,28 @@ OGRErr OGRSpatialReference::ImportFromESRIStatePlaneWKT(  int code, const char* 
         return importFromDict( "esri_StatePlane_extra.wkt", codeS);
     }
 
+    long searchCode = -1;
+
     /* Find state plane prj str by pcs code only */
     if( code == 0 && !datumName && pcsCode != 32767 )
     {
-
         int unitCode = 1;
         if( EQUAL(unitsName, "international_feet") )
             unitCode = 3;
         else if( strstr(unitsName, "feet") || strstr(unitsName, "foot") )
             unitCode = 2;
-        for(i=0; statePlanePcsCodeToZoneCode[i] != 0; i+=2)
+
+        for(int i=0; statePlanePcsCodeToZoneCode[i] != 0; i+=2)
         {
             if( pcsCode == statePlanePcsCodeToZoneCode[i] )
             {
                 searchCode = statePlanePcsCodeToZoneCode[i+1];
                 int unitIndex =  searchCode % 10;
-                if( (unitCode == 1 && !(unitIndex == 0 || unitIndex == 1)) 
+                if( (unitCode == 1 && !(unitIndex == 0 || unitIndex == 1))
                     || (unitCode == 2 && !(unitIndex == 2 || unitIndex == 3 || unitIndex == 4 ))
                     || (unitCode == 3 && !(unitIndex == 5 || unitIndex == 6 )) )
                 {
-                    searchCode -= unitIndex; 
+                    searchCode -= unitIndex;
                     switch (unitIndex)
                     {
                       case 0:
@@ -2380,10 +2401,10 @@ OGRErr OGRSpatialReference::ImportFromESRIStatePlaneWKT(  int code, const char* 
     }
     else /* Find state plane prj str by all inputs. */
     {
-        /* Need to have a specail EPSG-ESRI zone code mapping first. */
-        for(i=0; statePlaneZoneMapping[i] != 0; i+=3)
+        /* Need to have a special EPSG-ESRI zone code mapping first. */
+        for(int i=0; statePlaneZoneMapping[i] != 0; i+=3)
         {
-            if( code == statePlaneZoneMapping[i] 
+            if( code == statePlaneZoneMapping[i]
                 && (statePlaneZoneMapping[i+1] == -1 || pcsCode == statePlaneZoneMapping[i+1]))
             {
                 code = statePlaneZoneMapping[i+2];
@@ -2391,6 +2412,11 @@ OGRErr OGRSpatialReference::ImportFromESRIStatePlaneWKT(  int code, const char* 
             }
         }
         searchCode = (long)code * 10;
+        if (!datumName)
+        {
+            CPLError( CE_Failure, CPLE_AppDefined, "datumName is NULL.");
+            return OGRERR_FAILURE;
+        }
         if(EQUAL(datumName, "HARN"))
         {
             if( EQUAL(unitsName, "international_feet") )

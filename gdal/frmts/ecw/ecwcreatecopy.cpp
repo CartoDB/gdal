@@ -32,6 +32,11 @@
 #include "gdaljp2metadata.h"
 #include "ogr_spatialref.h"
 
+#if ECWSDK_VERSION<50
+/* For NCSStrDup */
+#include "NCSUtil.h"
+#endif
+
 CPL_CVSID("$Id$");
 
 #if defined(FRMT_ecw) && defined(HAVE_COMPRESS)
@@ -119,13 +124,12 @@ public:
     GDALProgressFunc  pfnProgress;
     void             *pProgressData;
 
-    
     GDALDataType eWorkDT;
 
     JP2UserBox** papoJP2UserBox;
     int          nJP2UserBox;
-    
-private : 
+
+private:
     NCSFileViewFileInfoEx sFileInfo;
 };
 
@@ -133,8 +137,8 @@ private :
 /*                         GDALECWCompressor()                          */
 /************************************************************************/
 
-GDALECWCompressor::GDALECWCompressor()
-
+GDALECWCompressor::GDALECWCompressor() :
+    eWorkDT(GDT_Unknown)
 {
     m_poSrcDS = NULL;
     m_nPercentComplete = -1;
@@ -173,11 +177,7 @@ CPLErr GDALECWCompressor::CloseDown()
 #if ECWSDK_VERSION>=50
     NCSFreeFileInfo(&sFileInfo);
 #else
-    for( int i = 0; i < sFileInfo.nBands; i++ ) 
-    { 
-        CPLFree( sFileInfo.pBands[i].szDesc ); 
-    } 
-    CPLFree( sFileInfo.pBands ); 
+    NCSFreeFileInfoEx(&sFileInfo);
 #endif
 
     Close( true );
@@ -733,21 +733,16 @@ CPLErr GDALECWCompressor::Initialize(
 /* -------------------------------------------------------------------- */
     int iBand;
 
-#if ECWSDK_VERSION>=50
     psClient->pBands = (NCSFileBandInfo *) 
         NCSMalloc( sizeof(NCSFileBandInfo) * nBands, true );
-#else
-    psClient->pBands = (NCSFileBandInfo *) 
-        CPLMalloc( sizeof(NCSFileBandInfo) * nBands );
-#endif
     for( iBand = 0; iBand < nBands; iBand++ )
     {
         psClient->pBands[iBand].nBits = (UINT8) nBits;
         psClient->pBands[iBand].bSigned = (BOOLEAN)bSigned;
-#if ECWSDK_VERSION>=50
+#if ECWSDK_VERSION >=50
         psClient->pBands[iBand].szDesc = NCSStrDup(papszBandDescriptions[iBand]);
 #else
-        psClient->pBands[iBand].szDesc = CPLStrdup(papszBandDescriptions[iBand]);
+        psClient->pBands[iBand].szDesc = NCSStrDup((char*)papszBandDescriptions[iBand]);
 #endif
     }
 
@@ -923,15 +918,10 @@ CPLErr GDALECWCompressor::Initialize(
         psClient->eCellSizeUnits = ECWTranslateToCellSizeUnits(szUnits);
     }
 
-#if ECWSDK_VERSION>=50
     NCSFree(psClient->szDatum);
     psClient->szDatum = NCSStrDup(szDatum);
     NCSFree(psClient->szProjection);
     psClient->szProjection = NCSStrDup(szProjection);
-#else
-    psClient->szDatum = szDatum;
-    psClient->szProjection = szProjection;
-#endif
 
     CPLDebug( "ECW", "Writing with PROJ=%s, DATUM=%s, UNITS=%s", 
               szProjection, szDatum, ECWTranslateFromCellSizeUnits(psClient->eCellSizeUnits) );
@@ -1442,8 +1432,7 @@ ECWCreateCopyJPEG2000( const char * pszFilename, GDALDataset *poSrcDS,
     }
 
     GDALDataType eDataType = poSrcDS->GetRasterBand(1)->GetRasterDataType();
-    if( eDataType != GDT_Byte 
-        && eDataType != GDT_Byte 
+    if( eDataType != GDT_Byte
         && eDataType != GDT_Int16
         && eDataType != GDT_UInt16
         && eDataType != GDT_Int32
@@ -1452,7 +1441,7 @@ ECWCreateCopyJPEG2000( const char * pszFilename, GDALDataset *poSrcDS,
         && eDataType != GDT_Float64
         && bStrict )
     {
-        CPLError( CE_Failure, CPLE_NotSupported, 
+        CPLError( CE_Failure, CPLE_NotSupported,
                   "JP2ECW driver doesn't support data type %s. ",
                   GDALGetDataTypeName(eDataType) );
 

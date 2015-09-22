@@ -2,6 +2,7 @@ use strict;
 use Scalar::Util 'blessed';
 use Test::More qw(no_plan);
 BEGIN { use_ok('Geo::GDAL') };
+Geo::GDAL::PushFinderLocation('../../data');
 
 # list of subs to test (documented subroutines) obtained with
 # perl parse-for-doxygen.pl | grep '^sub \|package'
@@ -75,8 +76,13 @@ ok($s eq 'abc', "EscapeString, got $s");
 
 # sub FindFile ok
 
-$s = Geo::GDAL::FindFile('', 'gcs.csv');
-ok($s, "FindFile, got $s");
+SKIP: {
+    $s = Geo::GDAL::FindFile('', 'gcs.csv');
+
+    skip "GDAL support files not found. Please set GDAL_DATA.", 1 unless $s;
+
+    ok($s, "FindFile, got $s");
+}
 
 # sub FinderClean ok
 

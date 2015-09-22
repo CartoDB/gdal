@@ -719,6 +719,7 @@ INGR_MinMax CPL_STDCALL INGR_SetMinMax( GDALDataType eType, double dValue )
         break;
     case GDT_Float64:
         uResult.AsReal64  = (real64) dValue;
+        break;
     default:
         uResult.AsUint8   = (uint8) 0;
     }
@@ -779,7 +780,7 @@ uint32 CPL_STDCALL INGR_GetDataBlockSize( const char *pszFilename,
 
 INGR_VirtualFile CPL_STDCALL INGR_CreateVirtualFile( const char *pszFilename,
                                                      INGR_Format eFormat,
-                                                     int nXSize, 
+                                                     int nXSize,
                                                      int nYSize,
                                                      int nTileSize,
                                                      int nQuality,
@@ -787,7 +788,7 @@ INGR_VirtualFile CPL_STDCALL INGR_CreateVirtualFile( const char *pszFilename,
                                                      int nBufferSize,
                                                      int nBand )
 {
-    INGR_VirtualFile hVirtual;
+    INGR_VirtualFile hVirtual = {NULL, NULL, NULL};
 
     hVirtual.pszFileName = CPLSPrintf( "/vsimem/%s.virtual",
         CPLGetBasename( pszFilename ) );
@@ -796,8 +797,9 @@ INGR_VirtualFile CPL_STDCALL INGR_CreateVirtualFile( const char *pszFilename,
 
     switch( eFormat )
     {
-    case JPEGRGB: 
+    case JPEGRGB:
         nJPGComponents = 3;
+        // fallthrough
     case JPEGGRAY:
         {
             GByte *pabyHeader = (GByte*) CPLCalloc( 1, 2048 );

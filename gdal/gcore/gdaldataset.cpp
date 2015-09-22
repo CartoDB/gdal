@@ -225,9 +225,7 @@ void GDALDataset::Init(int bForceCachedIOIn)
 GDALDataset::~GDALDataset()
 
 {
-    int         i;
-
-    // we don't want to report destruction of datasets that 
+    // we don't want to report destruction of datasets that
     // were never really open or meant as internal
     if( !bIsInternal && ( nBands != 0 || !EQUAL(GetDescription(),"") ) )
     {
@@ -293,7 +291,7 @@ GDALDataset::~GDALDataset()
 /* -------------------------------------------------------------------- */
 /*      Destroy the raster bands if they exist.                         */
 /* -------------------------------------------------------------------- */
-    for( i = 0; i < nBands && papoBands != NULL; i++ )
+    for( int i = 0; i < nBands && papoBands != NULL; i++ )
     {
         if( papoBands[i] != NULL )
             delete papoBands[i];
@@ -357,25 +355,23 @@ void GDALDataset::AddToDatasetOpenList()
 void GDALDataset::FlushCache()
 
 {
-    int         i;
-
     // This sometimes happens if a dataset is destroyed before completely
     // built. 
 
     if( papoBands != NULL )
     {
-        for( i = 0; i < nBands; i++ )
+        for( int i = 0; i < nBands; i++ )
         {
             if( papoBands[i] != NULL )
                 papoBands[i]->FlushCache();
         }
     }
 
-    int nLayers = GetLayerCount();
+    const int nLayers = GetLayerCount();
     if( nLayers > 0 )
     {
         CPLMutexHolderD( &m_hMutex );
-        for( i = 0; i < nLayers ; i++ )
+        for( int i = 0; i < nLayers ; i++ )
         {
             OGRLayer *poLayer = GetLayer(i);
 
@@ -419,26 +415,24 @@ void CPL_STDCALL GDALFlushCache( GDALDatasetH hDS )
 void GDALDataset::BlockBasedFlushCache()
 
 {
-    GDALRasterBand *poBand1;
-    int  nBlockXSize, nBlockYSize, iBand;
-    
-    poBand1 = GetRasterBand( 1 );
+    GDALRasterBand *poBand1 = GetRasterBand( 1 );
     if( poBand1 == NULL )
     {
         GDALDataset::FlushCache();
         return;
     }
 
+    int  nBlockXSize, nBlockYSize;
     poBand1->GetBlockSize( &nBlockXSize, &nBlockYSize );
-    
+
 /* -------------------------------------------------------------------- */
 /*      Verify that all bands match.                                    */
 /* -------------------------------------------------------------------- */
-    for( iBand = 1; iBand < nBands; iBand++ )
+    for( int iBand = 1; iBand < nBands; iBand++ )
     {
-        int nThisBlockXSize, nThisBlockYSize;
         GDALRasterBand *poBand = GetRasterBand( iBand+1 );
-        
+
+        int nThisBlockXSize, nThisBlockYSize;
         poBand->GetBlockSize( &nThisBlockXSize, &nThisBlockYSize );
         if( nThisBlockXSize != nBlockXSize && nThisBlockYSize != nBlockYSize )
         {
@@ -454,7 +448,7 @@ void GDALDataset::BlockBasedFlushCache()
     {
         for( int iX = 0; iX < poBand1->nBlocksPerRow; iX++ )
         {
-            for( iBand = 0; iBand < nBands; iBand++ )
+            for( int iBand = 0; iBand < nBands; iBand++ )
             {
                 GDALRasterBand *poBand = GetRasterBand( iBand+1 );
 
@@ -479,7 +473,7 @@ void GDALDataset::RasterInitialize( int nXSize, int nYSize )
 
 {
     CPLAssert( nXSize > 0 && nYSize > 0 );
-    
+
     nRasterXSize = nXSize;
     nRasterYSize = nYSize;
 }
@@ -552,7 +546,6 @@ void GDALDataset::SetBand( int nNewBand, GDALRasterBand * poBand )
 /*      Do we need to grow the bands list?                              */
 /* -------------------------------------------------------------------- */
     if( nBands < nNewBand || papoBands == NULL ) {
-        int             i;
         GDALRasterBand** papoNewBands;
 
         if( papoBands == NULL )
@@ -570,7 +563,7 @@ void GDALDataset::SetBand( int nNewBand, GDALRasterBand * poBand )
         }
         papoBands = papoNewBands;
 
-        for( i = nBands; i < nNewBand; i++ )
+        for( int i = nBands; i < nNewBand; i++ )
             papoBands[i] = NULL;
 
         nBands = MAX(nBands,nNewBand);
@@ -1525,9 +1518,10 @@ CPLErr GDALDataset::IRasterIO( GDALRWFlag eRWFlag,
          psExtraArg->eResampleAlg == GRIORA_Lanczos) &&
         !(nXSize == nBufXSize && nYSize == nBufYSize) && nBandCount > 1 )
     {
-        
-        int bUseDatasetRasterIOResampled = TRUE;
         GDALDataType eFirstBandDT = GDT_Unknown;
+        int nFirstMaskFlags = 0;
+        GDALRasterBand* poFirstMaskBand = NULL;
+        int nOKBands = 0;
         for(int i=0;i<nBandCount;i++)
         {
             GDALRasterBand* poBand = GetRasterBand(panBandMap[i]);
@@ -1535,43 +1529,103 @@ CPLErr GDALDataset::IRasterIO( GDALRWFlag eRWFlag,
                 poBand->GetOverviewCount() )
             {
                 // Could be improved to select the appropriate overview
-                bUseDatasetRasterIOResampled = FALSE;
                 break;
             }
             if( poBand->GetColorTable() != NULL )
             {
-                bUseDatasetRasterIOResampled = FALSE;
                 break;
             }
             GDALDataType eDT = poBand->GetRasterDataType();
             if( GDALDataTypeIsComplex( eDT ) )
             {
-                bUseDatasetRasterIOResampled = FALSE;
                 break;
             }
             if( i == 0 )
+            {
                 eFirstBandDT = eDT;
-            else if( eDT != eFirstBandDT )
-            {
-                bUseDatasetRasterIOResampled = FALSE;
-                break;
+                nFirstMaskFlags = poBand->GetMaskFlags();
+                poFirstMaskBand = poBand->GetMaskBand();
             }
-            int nMaskFlags = poBand->GetMaskFlags();
-            if( (nMaskFlags & GMF_PER_DATASET) == 0 && nMaskFlags != GMF_ALL_VALID )
+            else
             {
-                bUseDatasetRasterIOResampled = FALSE;
-                break;
+                if( eDT != eFirstBandDT )
+                {
+                    break;
+                }
+                int nMaskFlags = poBand->GetMaskFlags();
+                GDALRasterBand* poMaskBand = poBand->GetMaskBand();
+                if( nFirstMaskFlags == GMF_ALL_VALID && nMaskFlags == GMF_ALL_VALID )
+                {
+                    /* ok */
+                }
+                else if( poFirstMaskBand == poMaskBand )
+                {
+                    /* ok */
+                }
+                else
+                {
+                    break;
+                }
             }
-        }
-        if( bUseDatasetRasterIOResampled )
-        {
-            return RasterIOResampled( eRWFlag, nXOff, nYOff, nXSize, nYSize, 
-                                   pData, nBufXSize, nBufYSize,
-                                   eBufType, nBandCount, panBandMap,
-                                   nPixelSpace, nLineSpace, nBandSpace,
-                                   psExtraArg );
+
+            nOKBands ++;
         }
 
+        GDALProgressFunc  pfnProgressGlobal = psExtraArg->pfnProgress;
+        void             *pProgressDataGlobal = psExtraArg->pProgressData;
+
+        CPLErr eErr = CE_None;
+        if( nOKBands > 0 )
+        {
+            if( nOKBands < nBandCount )
+            {
+                psExtraArg->pfnProgress = GDALScaledProgress;
+                psExtraArg->pProgressData = 
+                    GDALCreateScaledProgress( 0.0, (double)nOKBands / nBandCount,
+                                            pfnProgressGlobal,
+                                            pProgressDataGlobal );
+                if( psExtraArg->pProgressData == NULL )
+                    psExtraArg->pfnProgress = NULL;
+            }
+
+            eErr = RasterIOResampled( eRWFlag, nXOff, nYOff, nXSize, nYSize, 
+                                   pData, nBufXSize, nBufYSize,
+                                   eBufType, nOKBands, panBandMap,
+                                   nPixelSpace, nLineSpace, nBandSpace,
+                                   psExtraArg );
+
+            if( nOKBands < nBandCount )
+            {
+                GDALDestroyScaledProgress( psExtraArg->pProgressData );
+            }
+        }
+        if( eErr == CE_None && nOKBands < nBandCount )
+        {
+            if( nOKBands > 0 )
+            {
+                psExtraArg->pfnProgress = GDALScaledProgress;
+                psExtraArg->pProgressData = 
+                    GDALCreateScaledProgress( (double)nOKBands / nBandCount, 1.0,
+                                            pfnProgressGlobal,
+                                            pProgressDataGlobal );
+                if( psExtraArg->pProgressData == NULL )
+                    psExtraArg->pfnProgress = NULL;
+            }
+            eErr = BandBasedRasterIO( eRWFlag, nXOff, nYOff, nXSize, nYSize, 
+                                   (GByte*)pData + nBandSpace * nOKBands, nBufXSize, nBufYSize,
+                                   eBufType, nBandCount - nOKBands, panBandMap + nOKBands,
+                                   nPixelSpace, nLineSpace, nBandSpace,
+                                   psExtraArg );
+            if( nOKBands > 0 )
+            {
+                GDALDestroyScaledProgress( psExtraArg->pProgressData );
+            }
+        }
+
+        psExtraArg->pfnProgress = pfnProgressGlobal;
+        psExtraArg->pProgressData = pProgressDataGlobal;
+
+        return eErr;
     }
         
     return BandBasedRasterIO( eRWFlag, nXOff, nYOff, nXSize, nYSize, 
@@ -1814,9 +1868,9 @@ CPLErr GDALDataset::RasterIO( GDALRWFlag eRWFlag,
 
 {
     int i = 0;
-    int bNeedToFreeBandMap = FALSE;
+    bool bNeedToFreeBandMap = false;
     CPLErr eErr = CE_None;
-    
+
     GDALRasterIOExtraArg sExtraArg;
     if( psExtraArg == NULL )
     {
@@ -1893,7 +1947,7 @@ CPLErr GDALDataset::RasterIO( GDALRWFlag eRWFlag,
             for( i = 0; i < nBandCount; i++ )
                 panBandMap[i] = i+1;
 
-            bNeedToFreeBandMap = TRUE;
+            bNeedToFreeBandMap = true;
         }
         else
             panBandMap = anBandMap;
@@ -3191,7 +3245,7 @@ int GDALDataset::CloseDependentDatasets()
  * @since GDAL 1.9.0
  */
 
-void GDALDataset::ReportError(CPLErr eErrClass, int err_no, const char *fmt, ...)
+void GDALDataset::ReportError(CPLErr eErrClass, CPLErrorNum err_no, const char *fmt, ...)
 {
     va_list args;
 
@@ -4062,7 +4116,7 @@ OGRLayer *GDALDataset::CopyLayer( OGRLayer *poSrcLayer,
 
     if( nGroupTransactions <= 0 )
     {
-      while( TRUE )
+      while( true )
       {
         OGRFeature      *poDstFeature = NULL;
 
@@ -4128,7 +4182,8 @@ OGRLayer *GDALDataset::CopyLayer( OGRLayer *poSrcLayer,
     }
     else
     {
-      int i, bStopTransfer = FALSE, bStopTransaction = FALSE;
+      bool bStopTransfer = false;
+      bool bStopTransaction = false;
       int nFeatCount = 0; // Number of features in the temporary array
       int nFeaturesToAdd = 0;
       OGRFeature **papoDstFeature =
@@ -4144,7 +4199,7 @@ OGRLayer *GDALDataset::CopyLayer( OGRLayer *poSrcLayer,
 
             if( poFeature == NULL )
             {
-                bStopTransfer = 1;
+                bStopTransfer = true;
                 break;
             }
 
@@ -4158,7 +4213,8 @@ OGRLayer *GDALDataset::CopyLayer( OGRLayer *poSrcLayer,
                           "Unable to translate feature " CPL_FRMT_GIB " from layer %s.\n",
                           poFeature->GetFID(), poSrcDefn->GetName() );
                 OGRFeature::DestroyFeature( poFeature );
-                bStopTransfer = TRUE;
+                poFeature = NULL;
+                bStopTransfer = true;
                 break;
             }
 
@@ -4177,32 +4233,36 @@ OGRLayer *GDALDataset::CopyLayer( OGRLayer *poSrcLayer,
                                       " from layer %s.\n",
                                       poFeature->GetFID(), poSrcDefn->GetName() );
                             OGRFeature::DestroyFeature( poFeature );
-                            bStopTransfer = TRUE;
+                            bStopTransfer = true;
+                            poFeature = NULL;
                             break;
                         }
                     }
                 }
             }
 
-            papoDstFeature[nFeatCount]->SetFID( poFeature->GetFID() );
-
-            OGRFeature::DestroyFeature( poFeature );
+            if (poFeature)
+            {
+                papoDstFeature[nFeatCount]->SetFID( poFeature->GetFID() );
+                OGRFeature::DestroyFeature( poFeature );
+                poFeature = NULL;
+            }
         }
         nFeaturesToAdd = nFeatCount;
 
         CPLErrorReset();
-        bStopTransaction = FALSE;
+        bStopTransaction = false;
         while( !bStopTransaction )
         {
-            bStopTransaction = TRUE;
+            bStopTransaction = true;
             poDstLayer->StartTransaction();
-            for( i = 0; i < nFeaturesToAdd; i++ )
+            for( int i = 0; i < nFeaturesToAdd; i++ )
             {
                 if( poDstLayer->CreateFeature( papoDstFeature[i] ) != OGRERR_NONE )
                 {
                     nFeaturesToAdd = i;
-                    bStopTransfer = TRUE;
-                    bStopTransaction = FALSE;
+                    bStopTransfer = true;
+                    bStopTransaction = false;
                 }
             }
             if( bStopTransaction )
@@ -4211,7 +4271,7 @@ OGRLayer *GDALDataset::CopyLayer( OGRLayer *poSrcLayer,
                 poDstLayer->RollbackTransaction();
         }
 
-        for( i = 0; i < nFeatCount; i++ )
+        for( int i = 0; i < nFeatCount; i++ )
             OGRFeature::DestroyFeature( papoDstFeature[i] );
       }
       CPLFree(papoDstFeature);
@@ -5202,7 +5262,7 @@ OGRLayer * GDALDataset::ExecuteSQL( const char *pszStatement,
     if( poSelectParseOptions != NULL )
         poCustomFuncRegistrar = poSelectParseOptions->poCustomFuncRegistrar;
     if( psSelectInfo->preparse( pszStatement,
-                                poCustomFuncRegistrar != NULL ) != CPLE_None )
+                                poCustomFuncRegistrar != NULL ) != CE_None )
     {
         delete psSelectInfo;
         return NULL;

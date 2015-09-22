@@ -185,7 +185,7 @@ void OGRMakeWktCoordinate( char *pszTarget, double x, double y, double z,
 
     int nLenX, nLenY;
 
-    if( x == (int) x && y == (int) y )
+    if( CPL_IS_DOUBLE_A_INT(x) && CPL_IS_DOUBLE_A_INT(y) )
     {
         snprintf( szX, bufSize, "%d", (int) x );
         snprintf( szY, bufSize, "%d", (int) y );
@@ -201,7 +201,7 @@ void OGRMakeWktCoordinate( char *pszTarget, double x, double y, double z,
 
     if( nDimension == 3 )
     {
-        if( z == (int) z )
+        if( CPL_IS_DOUBLE_A_INT(z) )
         {
             snprintf( szZ, bufSize, "%d", (int) z );
         }
@@ -565,7 +565,7 @@ int OGRParseDate( const char *pszInput,
                   OGRField *psField,
                   CPL_UNUSED int nOptions )
 {
-    int bGotSomething = FALSE;
+    bool bGotSomething = false;
 
     psField->Date.Year = 0;
     psField->Date.Month = 0;
@@ -622,8 +622,8 @@ int OGRParseDate( const char *pszInput,
         while( *pszInput >= '0' && *pszInput <= '9' )
             pszInput++;
 
-        bGotSomething = TRUE;
-        
+        bGotSomething = true;
+
         /* If ISO 8601 format */
         if( *pszInput == 'T' )
             pszInput ++;
@@ -675,7 +675,7 @@ int OGRParseDate( const char *pszInput,
             }
         }
 
-        bGotSomething = TRUE;
+        bGotSomething = true;
     }
 
     // No date or time!
@@ -1009,10 +1009,10 @@ char* OGRGetXML_UTF8_EscapedString(const char* pszString)
     if (!CPLIsUTF8(pszString, -1) &&
          CSLTestBoolean(CPLGetConfigOption("OGR_FORCE_ASCII", "YES")))
     {
-        static int bFirstTime = TRUE;
+        static bool bFirstTime = true;
         if (bFirstTime)
         {
-            bFirstTime = FALSE;
+            bFirstTime = false;
             CPLError(CE_Warning, CPLE_AppDefined,
                     "%s is not a valid UTF-8 string. Forcing it to ASCII.\n"
                     "If you still want the original string and change the XML file encoding\n"
@@ -1220,9 +1220,10 @@ OGRErr OGRReadWKBGeometryType( unsigned char * pabyData, OGRwkbVariant eWkbVaria
 /* -------------------------------------------------------------------- */
 /*      Get the byte order byte.                                        */
 /* -------------------------------------------------------------------- */
-    OGRwkbByteOrder eByteOrder = DB2_V72_FIX_BYTE_ORDER((OGRwkbByteOrder) *pabyData);
-    if (!( eByteOrder == wkbXDR || eByteOrder == wkbNDR ))
+    int nByteOrder = DB2_V72_FIX_BYTE_ORDER(*pabyData);
+    if (!( nByteOrder == wkbXDR || nByteOrder == wkbNDR ))
         return OGRERR_CORRUPT_DATA;
+    OGRwkbByteOrder eByteOrder = (OGRwkbByteOrder) nByteOrder;
 
 /* -------------------------------------------------------------------- */
 /*      Get the geometry feature type.  For now we assume that          */

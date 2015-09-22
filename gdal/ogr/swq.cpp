@@ -97,7 +97,7 @@ int swqlex( YYSTYPE *ppNode, swq_parse_context *context )
         char *token;
         int i_token;
         char chQuote = *pszInput;
-        int bFoundEndQuote = FALSE;
+        bool bFoundEndQuote = false;
 
         int nRet = *pszInput == '"' ? SWQT_IDENTIFIER : SWQT_STRING;
 
@@ -117,7 +117,7 @@ int swqlex( YYSTYPE *ppNode, swq_parse_context *context )
             else if( *pszInput == chQuote )
             {
                 pszInput++;
-                bFoundEndQuote = TRUE;
+                bFoundEndQuote = true;
                 break;
             }
             
@@ -185,7 +185,7 @@ int swqlex( YYSTYPE *ppNode, swq_parse_context *context )
         else
         {
             GIntBig nVal = CPLAtoGIntBig(osToken);
-            if( (GIntBig)(int)nVal == nVal )
+            if( CPL_INT64_FITS_ON_INT32(nVal) )
                 *ppNode = new swq_expr_node( (int)nVal );
             else
                 *ppNode = new swq_expr_node( nVal );
@@ -362,8 +362,11 @@ swq_select_summarize( swq_select *select_info,
             
             summary->distinct_list = (char **) 
                 CPLMalloc(sizeof(char *) * (size_t)(summary->count+1));
-            memcpy( summary->distinct_list, old_list, 
-                    sizeof(char *) * (size_t)summary->count );
+            if( summary->count )
+            {
+                memcpy( summary->distinct_list, old_list, 
+                        sizeof(char *) * (size_t)summary->count );
+            }
             summary->distinct_list[(summary->count)++] = 
                 (value != NULL) ? CPLStrdup( value ) : NULL;
 

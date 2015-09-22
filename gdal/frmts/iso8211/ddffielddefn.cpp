@@ -40,18 +40,11 @@ CPL_CVSID("$Id$");
 /************************************************************************/
 
 DDFFieldDefn::DDFFieldDefn()
-
-{
-    poModule = NULL;
-    pszTag = NULL;
-    _fieldName = NULL;
-    _arrayDescr = NULL;
-    _formatControls = NULL;
-    nSubfieldCount = 0;
-    papoSubfields = NULL;
-    bRepeatingSubfields = FALSE;
-    nFixedWidth = 0;
-}
+    : poModule(NULL), pszTag(NULL), _fieldName(NULL), _arrayDescr(NULL),
+      _formatControls(NULL), bRepeatingSubfields(FALSE), nFixedWidth(0),
+      _data_struct_code(dsc_elementary), _data_type_code(dtc_char_string),
+      nSubfieldCount(0), papoSubfields(NULL)
+{ }
 
 /************************************************************************/
 /*                           ~DDFFieldDefn()                            */
@@ -60,13 +53,12 @@ DDFFieldDefn::DDFFieldDefn()
 DDFFieldDefn::~DDFFieldDefn()
 
 {
-    int   i;
-
     CPLFree( pszTag );
     CPLFree( _fieldName );
     CPLFree( _arrayDescr );
     CPLFree( _formatControls );
 
+    int i;
     for( i = 0; i < nSubfieldCount; i++ )
         delete papoSubfields[i];
     CPLFree( papoSubfields );
@@ -683,7 +675,7 @@ int DDFFieldDefn::ApplyFormats()
         || _formatControls[0] != '('
         || _formatControls[strlen(_formatControls)-1] != ')' )
     {
-        CPLError( CE_Warning, CPLE_DiscardedFormat,
+        CPLError( CE_Warning, (CPLErrorNum)CPLE_DiscardedFormat,
                   "Format controls for `%s' field missing brackets:%s",
                   pszTag, _formatControls );
         
@@ -727,7 +719,7 @@ int DDFFieldDefn::ApplyFormats()
         
         if( iFormatItem >= nSubfieldCount )
         {
-            CPLError( CE_Warning, CPLE_DiscardedFormat,
+            CPLError( CE_Warning, (CPLErrorNum)CPLE_DiscardedFormat,
                       "Got more formats than subfields for field `%s'.",
                       pszTag );
             break;
@@ -747,7 +739,7 @@ int DDFFieldDefn::ApplyFormats()
 
     if( iFormatItem < nSubfieldCount )
     {
-        CPLError( CE_Warning, CPLE_DiscardedFormat,
+        CPLError( CE_Warning, (CPLErrorNum)CPLE_DiscardedFormat,
                   "Got less formats than subfields for field `%s'.",
                   pszTag );
         return FALSE;

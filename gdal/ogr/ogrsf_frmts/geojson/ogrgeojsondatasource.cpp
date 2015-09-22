@@ -48,9 +48,7 @@ OGRGeoJSONDataSource::OGRGeoJSONDataSource()
         bOtherPages_(FALSE),
         bFpOutputIsSeekable_( FALSE ),
         nBBOXInsertLocation_(0)
-{
-    // I've got constructed. Lunch time!
-}
+{ }
 
 /************************************************************************/
 /*                           ~OGRGeoJSONDataSource()                    */
@@ -59,12 +57,6 @@ OGRGeoJSONDataSource::OGRGeoJSONDataSource()
 OGRGeoJSONDataSource::~OGRGeoJSONDataSource()
 {
     Clear();
-    
-    if( NULL != fpOut_ )
-    {
-        VSIFCloseL( fpOut_ );
-        fpOut_ = NULL;
-    }
 }
 
 /************************************************************************/
@@ -111,25 +103,25 @@ int OGRGeoJSONDataSource::Open( GDALOpenInfo* poOpenInfo,
     LoadLayers(poOpenInfo->papszOpenOptions);
     if( nLayers_ == 0 )
     {
-        int bEmitError = TRUE;
+        bool bEmitError = true;
         if( eGeoJSONSourceService == nSrcType )
         {
             CPLString osTmpFilename = CPLSPrintf("/vsimem/%p/%s", this,
                                         CPLGetFilename(poOpenInfo->pszFilename));
             VSIFCloseL(VSIFileFromMemBuffer( osTmpFilename,
                                              (GByte*)pszGeoData_,
-                                             nGeoDataLen_, 
+                                             nGeoDataLen_,
                                              TRUE ));
             pszGeoData_ = NULL;
             if( GDALIdentifyDriver(osTmpFilename, NULL) )
-                bEmitError = FALSE;
+                bEmitError = false;
             VSIUnlink(osTmpFilename);
         }
         Clear();
 
         if( bEmitError )
         {
-            CPLError( CE_Failure, CPLE_OpenFailed, 
+            CPLError( CE_Failure, CPLE_OpenFailed,
                     "Failed to read GeoJSON data" );
         }
         return FALSE;
@@ -354,11 +346,11 @@ void OGRGeoJSONDataSource::Clear()
     pszGeoData_ = NULL;
     nGeoDataLen_ = 0;
 
-    if( NULL != fpOut_ )
+    if( fpOut_ )
     {
         VSIFCloseL( fpOut_ );
+        fpOut_ = NULL;
     }
-    fpOut_ = NULL;
 }
 
 /************************************************************************/

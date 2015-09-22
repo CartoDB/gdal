@@ -729,7 +729,8 @@ extern unzFile ZEXPORT cpl_unzOpen2 (const char *path,
     us.central_pos = central_pos;
     us.pfile_in_zip_read = NULL;
     us.encrypted = 0;
-
+    us.num_file = 0;
+    us.pos_in_central_dir = 0;
 
     s=(unz_s*)ALLOC(sizeof(unz_s));
     *s=us;
@@ -827,7 +828,7 @@ local int unzlocal_GetCurrentFileInfoInternal (unzFile file,
     uLong uMagic;
     long lSeek=0;
     uLong uL;
-    int bHasUTF8Filename = FALSE;
+    bool bHasUTF8Filename = false;
 
     if (file==NULL)
         return UNZ_PARAMERROR;
@@ -1024,7 +1025,7 @@ local int unzlocal_GetCurrentFileInfoInternal (unzFile file,
                         uLong utf8Size = dataSize - 1 - 4;
                         uLong uSizeRead ;
 
-                        bHasUTF8Filename = TRUE;
+                        bHasUTF8Filename = true;
 
                         if (utf8Size<fileNameBufferSize)
                         {

@@ -140,7 +140,8 @@ CPL_C_END
 enum eFileType {
 	level_11 = 0,
 	level_15,
-    level_10
+        level_10,
+        level_unknown = 999,
 };
 
 enum ePolarization {
@@ -176,18 +177,18 @@ public:
     static void ReadMetadata( PALSARJaxaDataset *poDS, VSILFILE *fp );
 };
 
-PALSARJaxaDataset::PALSARJaxaDataset()
-{
-    pasGCPList = NULL;
-    nGCPCount = 0;
-}
+PALSARJaxaDataset::PALSARJaxaDataset() :
+    pasGCPList(NULL),
+    nGCPCount(0),
+    nFileType(level_unknown)
+{ }
 
 PALSARJaxaDataset::~PALSARJaxaDataset()
 {
-    if( nGCPCount > 0 ) 
+    if( nGCPCount > 0 )
     {
-        GDALDeinitGCPs( nGCPCount, pasGCPList ); 
-        CPLFree( pasGCPList ); 
+        GDALDeinitGCPs( nGCPCount, pasGCPList );
+        CPLFree( pasGCPList );
     }
 }
 
@@ -206,6 +207,7 @@ class PALSARJaxaRasterBand : public GDALRasterBand {
     int nBitsPerSample;
     int nSamplesPerGroup;
     int nRecordSize;
+
 public:
     PALSARJaxaRasterBand( PALSARJaxaDataset *poDS, int nBand, VSILFILE *fp );
     ~PALSARJaxaRasterBand();
@@ -217,8 +219,9 @@ public:
 /*                         PALSARJaxaRasterBand()                       */
 /************************************************************************/
 
-PALSARJaxaRasterBand::PALSARJaxaRasterBand( PALSARJaxaDataset *poDS, 
-	int nBand, VSILFILE *fp )
+PALSARJaxaRasterBand::PALSARJaxaRasterBand( PALSARJaxaDataset *poDS,
+                                            int nBand, VSILFILE *fp ) :
+    nPolarization(hh)
 {
     this->fp = fp;
 
@@ -274,15 +277,16 @@ PALSARJaxaRasterBand::PALSARJaxaRasterBand( PALSARJaxaDataset *poDS,
         nPolarization = vv;
         SetMetadataItem( "POLARIMETRIC_INTERP", "VV" );
         break;
+      // TODO: What about the default?
     }
-	
+
     /* size of block we can read */
     nBlockXSize = nRasterXSize;
     nBlockYSize = 1;
 
     /* set the file pointer to the first SAR data record */
     VSIFSeekL( fp, IMAGE_OPT_DESC_LENGTH, SEEK_SET );
-}	
+}
 
 /************************************************************************/
 /*                        ~PALSARJaxaRasterBand()                       */

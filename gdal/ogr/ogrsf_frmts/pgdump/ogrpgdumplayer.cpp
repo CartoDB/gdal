@@ -41,9 +41,9 @@ static CPLString OGRPGDumpEscapeStringList(
                                        OGRPGCommonEscapeStringCbk pfnEscapeString,
                                        void* userdata);
 
-static CPLString OGRPGDumpEscapeStringWithUserData(   void* user_data,
+static CPLString OGRPGDumpEscapeStringWithUserData(   CPL_UNUSED void* user_data,
                                    const char* pszStrValue, int nMaxLength,
-                                   const char* pszLayerName,
+                                   CPL_UNUSED const char* pszLayerName,
                                    const char* pszFieldName)
 {
     return OGRPGDumpEscapeString(pszStrValue, nMaxLength, pszFieldName);
@@ -159,7 +159,7 @@ OGRErr OGRPGDumpLayer::ICreateFeature( OGRFeature *poFeature )
             {
                 CPLError(CE_Failure, CPLE_AppDefined,
                             "Inconsistent values of FID and field of same name");
-                return CE_Failure;
+                return OGRERR_FAILURE;
             }
         }
     }
@@ -220,7 +220,7 @@ OGRErr OGRPGDumpLayer::ICreateFeature( OGRFeature *poFeature )
                 eErr = CreateFeatureViaCopy( poFeature );
                 if( bFIDSet )
                     bAutoFIDOnCreateViaCopy = FALSE;
-                if( eErr == CE_None && bAutoFIDOnCreateViaCopy )
+                if( eErr == OGRERR_NONE && bAutoFIDOnCreateViaCopy )
                 {
                     poFeature->SetFID( ++iNextShapeId );
                 }
@@ -228,7 +228,7 @@ OGRErr OGRPGDumpLayer::ICreateFeature( OGRFeature *poFeature )
         }
     }
 
-    if( eErr == CE_None && iFIDAsRegularColumnIndex >= 0 )
+    if( eErr == OGRERR_NONE && iFIDAsRegularColumnIndex >= 0 )
     {
         poFeature->SetField(iFIDAsRegularColumnIndex, poFeature->GetFID());
     }
@@ -1468,7 +1468,7 @@ OGRErr OGRPGDumpLayer::CreateField( OGRFieldDefn *poFieldIn,
     {
         CPLError(CE_Failure, CPLE_AppDefined, "Wrong field type for %s",
                  oField.GetNameRef());
-        return CE_Failure;
+        return OGRERR_FAILURE;
     }
 
 /* -------------------------------------------------------------------- */

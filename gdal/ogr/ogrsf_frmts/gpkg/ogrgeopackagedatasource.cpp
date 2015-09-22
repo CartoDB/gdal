@@ -405,7 +405,9 @@ int GDALGeoPackageDataset::GetSrsId(const OGRSpatialReference * cpoSRS)
 /*                        GDALGeoPackageDataset()                       */
 /************************************************************************/
 
-GDALGeoPackageDataset::GDALGeoPackageDataset()
+GDALGeoPackageDataset::GDALGeoPackageDataset() :
+    m_dfTMSMinX(0.0),
+    m_dfTMSMaxY(0.0)
 {
     m_bNew = FALSE;
     m_papoLayers = NULL;
@@ -1967,7 +1969,7 @@ char **GDALGeoPackageDataset::GetMetadata( const char *pszDomain )
 /*                            WriteMetadata()                           */
 /************************************************************************/
 
-void GDALGeoPackageDataset::WriteMetadata(CPLXMLNode* psXMLNode, /* will be destroyed by the method /*/
+void GDALGeoPackageDataset::WriteMetadata(CPLXMLNode* psXMLNode, /* will be destroyed by the method */
                                           const char* pszTableName)
 {
     int bIsEmpty = (psXMLNode == NULL);
@@ -3425,7 +3427,7 @@ OGRLayer* GDALGeoPackageDataset::ICreateLayer( const char * pszLayerName,
 /*                            DeleteLayer()                             */
 /************************************************************************/
 
-int GDALGeoPackageDataset::DeleteLayer( int iLayer )
+OGRErr GDALGeoPackageDataset::DeleteLayer( int iLayer )
 {
     char *pszSQL;
 
@@ -4376,4 +4378,3 @@ const char* GDALGeoPackageDataset::GetGeometryTypeString(OGRwkbGeometryType eTyp
     }
     return pszGPKGGeomType;
 }
-

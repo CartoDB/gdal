@@ -384,11 +384,11 @@ class AIGErrorDescription
 {
     public:
         CPLErr eErr;
-        int    no;
+        CPLErrorNum    no;
         CPLString osMsg;
 };
 
-static void CPL_STDCALL AIGErrorHandlerVATOpen(CPLErr eErr, int no, const char* msg)
+static void CPL_STDCALL AIGErrorHandlerVATOpen(CPLErr eErr, CPLErrorNum no, const char* msg)
 {
     std::vector<AIGErrorDescription>* paoErrors =
         (std::vector<AIGErrorDescription>* )CPLGetErrorHandlerUserData();
@@ -978,6 +978,7 @@ static CPLErr AIGRename( const char *pszNewName, const char *pszOldName )
                       "Unable to create directory %s:\n%s",
                       osNewPath.c_str(),
                       VSIStrerror(errno) );
+            CSLDestroy(papszNewFileList);
             return CE_Failure;
         }
     }
@@ -989,24 +990,32 @@ static CPLErr AIGRename( const char *pszNewName, const char *pszOldName )
 
     for( i = 0; papszFileList[i] != NULL; i++ )
     {
-        if( VSIStatL( papszFileList[i], &sStatBuf ) == 0 
+        if( VSIStatL( papszFileList[i], &sStatBuf ) == 0
             && VSI_ISREG( sStatBuf.st_mode ) )
         {
             if( CPLMoveFile( papszNewFileList[i], papszFileList[i] ) != 0 )
             {
-                CPLError( CE_Failure, CPLE_AppDefined, 
+                CPLError( CE_Failure, CPLE_AppDefined,
                           "Unable to move %s to %s:\n%s",
                           papszFileList[i],
-                          papszNewFileList[i], 
+                          papszNewFileList[i],
                           VSIStrerror(errno) );
+                CSLDestroy(papszNewFileList);
                 return CE_Failure;
             }
         }
     }
 
     if( VSIStatL( osOldPath, &sStatBuf ) == 0 )
-        CPLUnlinkTree( osOldPath );
+    {
+        if ( CPLUnlinkTree( osOldPath ) != 0 )
+        {
+          CPLError( CE_Warning, CPLE_AppDefined, "Unable to cleanup old path.");
+        }
+    }
 
+    CSLDestroy(papszFileList);
+    CSLDestroy(papszNewFileList);
     return CE_None;
 }
 

@@ -44,17 +44,13 @@ static GInt16 CastToGInt16(float val);
 
 static GInt16 CastToGInt16(float val)
 {
-    float temp;
+    if ( val < -32768.0 )
+        val = -32768.0;
 
-    temp = val;
+    if ( val > 32767 )
+        val = 32767.0;
 
-    if ( temp < -32768.0 )
-        temp = -32768.0;
-
-    if ( temp > 32767 )
-        temp = 32767.0;
-
-    return (GInt16) temp;    
+    return static_cast<GInt16>(val);
 }
 
 static const char *CeosExtension[][6] = { 
@@ -146,7 +142,7 @@ class SAR_CEOSDataset : public GDALPamDataset
     VSILFILE	*fpImage;
 
     char        **papszTempMD;
-    
+
     int         nGCPCount;
     GDAL_GCP    *pasGCPList;
 
@@ -412,11 +408,9 @@ CPLErr CCPRasterBand::IReadBlock( CPL_UNUSED int nBlockXOff,
 /* -------------------------------------------------------------------- */
     if( !bPowTableInitialized )
     {
-        int i;
-
         bPowTableInitialized = TRUE;
 
-        for( i = 0; i < 256; i++ )
+        for( int i = 0; i < 256; i++ )
         {
             afPowTable[i] = (float)pow( 2.0, i-128 );
         }
@@ -426,17 +420,16 @@ CPLErr CCPRasterBand::IReadBlock( CPL_UNUSED int nBlockXOff,
 /*      Copy the desired band out based on the size of the type, and    */
 /*      the interleaving mode.                                          */
 /* -------------------------------------------------------------------- */
-    int iX;
-
-    for( iX = 0; iX < nBlockXSize; iX++ )
+    for( int iX = 0; iX < nBlockXSize; iX++ )
     {
         unsigned char *pabyGroup = pabyRecord + iX * ImageDesc->BytesPerPixel;
         signed char *Byte = (signed char*)pabyGroup-1; /* A ones based alias */
-        double dfReSHH, dfImSHH, dfReSHV, dfImSHV, 
-            dfReSVH, dfImSVH, dfReSVV, dfImSVV, dfScale;
+        double dfReSHH, dfImSHH, dfReSHV, dfImSHV,
+            dfReSVH, dfImSVH, dfReSVV, dfImSVV;
 
-        dfScale = sqrt( (Byte[2] / 254 + 1.5) * afPowTable[Byte[1] + 128] );
-        
+        const double dfScale = sqrt( (Byte[2] / 254.0 + 1.5)
+                                     * afPowTable[Byte[1] + 128] );
+
         if( nBand == 1 )
         {
             dfReSHH = Byte[3] * dfScale / 127.0;
@@ -649,13 +642,41 @@ CPLErr PALSARRasterBand::IReadBlock( CPL_UNUSED int nBlockXOff,
 /************************************************************************/
 
 SAR_CEOSDataset::SAR_CEOSDataset()
-
+    : fpImage(NULL), papszTempMD(NULL), nGCPCount(0), pasGCPList(NULL)
 {
-    fpImage = NULL;
-    nGCPCount = 0;
-    pasGCPList = NULL;
+    sVolume.Flavour = 0;
+    sVolume.Sensor = 0;
+    sVolume.ProductType = 0;
+    sVolume.FileNamingConvention = 0;
 
-    papszTempMD = NULL;
+    sVolume.VolumeDirectoryFile = 0;
+    sVolume.SARLeaderFile = 0;
+    sVolume.ImagryOptionsFile = 0;
+    sVolume.SARTrailerFile = 0;
+    sVolume.NullVolumeDirectoryFile = 0;
+
+    sVolume.ImageDesc.ImageDescValid = 0;
+    sVolume.ImageDesc.NumChannels = 0;
+    sVolume.ImageDesc.ChannelInterleaving = 0;
+    sVolume.ImageDesc.DataType = 0;
+    sVolume.ImageDesc.BytesPerRecord = 0;
+    sVolume.ImageDesc.Lines = 0;
+    sVolume.ImageDesc.TopBorderPixels = 0;
+    sVolume.ImageDesc.BottomBorderPixels = 0;
+    sVolume.ImageDesc.PixelsPerLine = 0;
+    sVolume.ImageDesc.LeftBorderPixels = 0;
+    sVolume.ImageDesc.RightBorderPixels = 0;
+    sVolume.ImageDesc.BytesPerPixel = 0;
+    sVolume.ImageDesc.RecordsPerLine = 0;
+    sVolume.ImageDesc.PixelsPerRecord = 0;
+    sVolume.ImageDesc.ImageDataStart = 0;
+    sVolume.ImageDesc.ImageSuffixData = 0;
+    sVolume.ImageDesc.FileDescriptorLength = 0;
+    sVolume.ImageDesc.PixelOrder = 0;
+    sVolume.ImageDesc.LineOrder = 0;
+    sVolume.ImageDesc.PixelDataBytesPerRecord = 0;
+
+    sVolume.RecordList = NULL;
 }
 
 /************************************************************************/

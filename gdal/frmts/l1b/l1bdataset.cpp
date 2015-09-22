@@ -201,6 +201,8 @@ class TimeCode {
     char        pszString[L1B_TIMECODE_LENGTH];
 
   public:
+    TimeCode() : lYear(0), lDay(0), lMillisecond(0) {}
+
     void SetYear(long year)
     {
         lYear = year;
@@ -1249,12 +1251,12 @@ void L1BDataset::FetchMetadataNOAA15()
         {
             n16 = GetUInt16(pabyRecordHeader + 32 + 2 * i);
             VSIFPrintfL(fpCSV,"%d,%d,%d,%d,%d,%d,",
-                    (n32 >> 7) & 1,
-                    (n32 >> 6) & 1,
-                    (n32 >> 5) & 1,
-                    (n32 >> 4) & 1,
-                    (n32 >> 2) & 1,
-                    (n32 >> 1) & 1);
+                    (n16 >> 7) & 1,
+                    (n16 >> 6) & 1,
+                    (n16 >> 5) & 1,
+                    (n16 >> 4) & 1,
+                    (n16 >> 2) & 1,
+                    (n16 >> 1) & 1);
         }
 
         /* Bit errors */

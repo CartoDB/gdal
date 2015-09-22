@@ -67,8 +67,54 @@ const Blackbody_lut_type Msg_reader_core::Blackbody_LUT[MSG_NUM_CHANNELS+1] = {
     {0,0,0}   // N/A
 };
 
+static
+void PhDataInit(PH_DATA *data)
+{
+  data->name[0] = '\0';
+  data->value[0] = '\0';
+}
 
-Msg_reader_core::Msg_reader_core(const char* fname) {
+static
+void SecondaryProdHeaderInit(SECONDARY_PROD_HEADER *header)
+{
+  PhDataInit(&header->abid);
+  PhDataInit(&header->smod);
+  PhDataInit(&header->apxs);
+  PhDataInit(&header->avpa);
+  PhDataInit(&header->lscd);
+  PhDataInit(&header->lmap);
+  PhDataInit(&header->qdlc);
+  PhDataInit(&header->qdlp);
+  PhDataInit(&header->qqai);
+  PhDataInit(&header->selectedBandIds);
+  PhDataInit(&header->southLineSelectedRectangle);
+  PhDataInit(&header->northLineSelectedRectangle);
+  PhDataInit(&header->eastColumnSelectedRectangle);
+  PhDataInit(&header->westColumnSelectedRectangle);
+}
+
+Msg_reader_core::Msg_reader_core(const char* fname) :
+    _f_data_offset(0),
+    _f_data_size(0),
+    _f_header_offset(0),
+    _f_header_size(0),
+    _visir_bytes_per_line(0),
+    _visir_packet_size(0),
+    _hrv_bytes_per_line(0),
+    _hrv_packet_size(0),
+    _interline_spacing(0),
+    _year(0),
+    _month(0),
+    _day(0),
+    _hour(0),
+    _minute(0),
+    _open_success(false)
+{
+    SecondaryProdHeaderInit(&_sec_header);
+    for (size_t i=0; i < MSG_NUM_CHANNELS; ++i) {
+      _calibration[i].cal_slope = 0.0;
+      _calibration[i].cal_offset = 0.0;
+    }
 
     FILE* fin = fopen(fname, "rb");
     if (!fin) {
@@ -76,9 +122,34 @@ Msg_reader_core::Msg_reader_core(const char* fname) {
         return;
     }
     read_metadata_block(fin);
+    fclose(fin);
 }
 
-Msg_reader_core::Msg_reader_core(FILE* fp) {
+Msg_reader_core::Msg_reader_core(FILE* fp) :
+    _f_data_offset(0),
+    _f_data_size(0),
+    _f_header_offset(0),
+    _f_header_size(0),
+    _visir_bytes_per_line(0),
+    _visir_packet_size(0),
+    _hrv_bytes_per_line(0),
+    _hrv_packet_size(0),
+    _interline_spacing(0),
+    _year(0),
+    _month(0),
+    _day(0),
+    _hour(0),
+    _minute(0),
+    _open_success(false)
+{
+    memset(&_main_header, 0, sizeof(_main_header));
+
+    SecondaryProdHeaderInit(&_sec_header);
+    for (size_t i=0; i < MSG_NUM_CHANNELS; ++i) {
+      _calibration[i].cal_slope = 0.0;
+      _calibration[i].cal_offset = 0.0;
+    }
+
     read_metadata_block(fp);
 }
 
@@ -281,4 +352,3 @@ double Msg_reader_core::compute_pixel_area_sqkm(double line, double column) {
 #endif // GDAL_SUPPORT
 
 } // namespace msg_native_format
-

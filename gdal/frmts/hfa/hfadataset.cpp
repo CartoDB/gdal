@@ -510,7 +510,9 @@ protected:
 /*                     HFARasterAttributeTable()                        */
 /************************************************************************/
 
-HFARasterAttributeTable::HFARasterAttributeTable(HFARasterBand *poBand, const char *pszName)
+HFARasterAttributeTable::HFARasterAttributeTable(HFARasterBand *poBand, const char *pszName) :
+    dfRow0Min(0.0),
+    dfBinSize(0.0)
 {
     this->hHFA = poBand->hHFA;
     this->poDT = poBand->hHFA->papoBand[poBand->nBand-1]->poNode->GetNamedChild(pszName);
@@ -819,7 +821,7 @@ const char *HFARasterAttributeTable::GetValueAsString( int iRow, int iField ) co
     // Get ValuesIO do do the work
     char *apszStrList[1];
     if( ((HFARasterAttributeTable*)this)->
-                ValuesIO(GF_Read, iField, iRow, 1, apszStrList ) != CPLE_None )
+                ValuesIO(GF_Read, iField, iRow, 1, apszStrList ) != CE_None )
     {
         return "";
     }
@@ -2925,16 +2927,19 @@ CPLErr HFARasterBand::BuildOverviews( const char *pszResampling,
 /* -------------------------------------------------------------------- */
         if( papoOvBands[iOverview] == NULL )
         {
-            iResult = HFACreateOverview( hHFA, nBand, 
+            iResult = HFACreateOverview( hHFA, nBand,
                                          panOverviewList[iOverview],
                                          pszResampling );
             if( iResult < 0 )
+            {
+                CPLFree( papoOvBands );
                 return CE_Failure;
+            }
 
             if( papoOverviewBands == NULL && nOverviews == 0 && iResult > 0)
             {
                 CPLDebug("HFA", "Shouldn't happen happened at line %d", __LINE__);
-                papoOverviewBands = (HFARasterBand **) 
+                papoOverviewBands = (HFARasterBand **)
                     CPLCalloc( sizeof(void*), iResult );
             }
 
@@ -4968,29 +4973,8 @@ CPLErr HFADataset::ReadProjection()
     const Eprj_ProParameters  *psPro;
     const Eprj_MapInfo        *psMapInfo;
     OGRSpatialReference        oSRS;
-    char *pszPE_COORDSYS;
-
-/* -------------------------------------------------------------------- */
-/*      Special logic for PE string in ProjectionX node.                */
-/* -------------------------------------------------------------------- */
-    pszPE_COORDSYS = HFAGetPEString( hHFA );
-    if( pszPE_COORDSYS != NULL
-        && strlen(pszPE_COORDSYS) > 0 
-        && oSRS.SetFromUserInput( pszPE_COORDSYS ) == OGRERR_NONE )
-    {
-        CPLFree( pszPE_COORDSYS );
-
-        oSRS.morphFromESRI();
-        oSRS.Fixup();
-
-        CPLFree( pszProjection );
-        pszProjection = NULL;
-        oSRS.exportToWkt( &pszProjection );
-        
-        return CE_None;
-    }
-    
-    CPLFree( pszPE_COORDSYS );
+    char *pszPE_COORDSYS = NULL;
+    int bTryReadingPEString = TRUE;
 
 /* -------------------------------------------------------------------- */
 /*      General case for Erdas style projections.                       */
@@ -5023,6 +5007,38 @@ CPLErr HFADataset::ReadProjection()
 
     pszProjection = HFAPCSStructToWKT( psDatum, psPro, psMapInfo, 
                                        poMapInformation );
+
+    // If we got a valid projection and managed to identify a EPSG code,
+    // then do not use the ESRI PE String.
+    if( pszProjection != NULL )
+    {
+        OGRSpatialReference oSRS(pszProjection);
+        if( oSRS.GetAuthorityCode(NULL) != NULL )
+            bTryReadingPEString = FALSE;
+    }
+
+/* -------------------------------------------------------------------- */
+/*      Special logic for PE string in ProjectionX node.                */
+/* -------------------------------------------------------------------- */
+    if( bTryReadingPEString )
+        pszPE_COORDSYS = HFAGetPEString( hHFA );
+    if( pszPE_COORDSYS != NULL
+        && strlen(pszPE_COORDSYS) > 0 
+        && oSRS.SetFromUserInput( pszPE_COORDSYS ) == OGRERR_NONE )
+    {
+        CPLFree( pszPE_COORDSYS );
+
+        oSRS.morphFromESRI();
+        oSRS.Fixup();
+
+        CPLFree( pszProjection );
+        pszProjection = NULL;
+        oSRS.exportToWkt( &pszProjection );
+        
+        return CE_None;
+    }
+    
+    CPLFree( pszPE_COORDSYS );
 
     if( pszProjection != NULL )
         return CE_None;
@@ -5839,7 +5855,10 @@ HFADataset::CreateCopy( const char * pszFilename, GDALDataset *poSrcDS,
 /*      Establish a representative data type to use.                    */
 /* -------------------------------------------------------------------- */
     if( !pfnProgress( 0.0, NULL, pProgressData ) )
+    {
+        CSLDestroy(papszModOptions);
         return NULL;
+    }
 
     for( iBand = 0; iBand < nBandCount; iBand++ )
     {

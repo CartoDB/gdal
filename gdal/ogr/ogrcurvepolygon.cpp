@@ -408,7 +408,7 @@ OGRErr OGRCurvePolygon::importFromWkb( unsigned char * pabyData,
     int nDataOffset = 0;
     OGRErr eErr = oCC.importPreambuleFromWkb(this, pabyData, nSize, nDataOffset,
                                              eByteOrder, 9, eWkbVariant);
-    if( eErr >= 0 )
+    if( eErr != OGRERR_NONE )
         return eErr;
 
     return oCC.importBodyFromWkb(this, pabyData, nSize, nDataOffset,
@@ -532,13 +532,10 @@ OGRGeometry* OGRCurvePolygon::getLinearGeometry(double dfMaxAngleStepSizeDegrees
 /*                           PointOnSurface()                           */
 /************************************************************************/
 
-int OGRCurvePolygon::PointOnSurface( OGRPoint *poPoint ) const
+OGRErr OGRCurvePolygon::PointOnSurface( OGRPoint *poPoint ) const
 
 {
-    OGRPolygon* poPoly = CurvePolyToPoly();
-    int ret = poPoly->PointOnSurface(poPoint);
-    delete poPoly;
-    return ret;
+    return PointOnSurfaceInternal(poPoint);
 }
 
 /************************************************************************/
@@ -568,9 +565,7 @@ void OGRCurvePolygon::getEnvelope( OGREnvelope3D * psEnvelope ) const
 OGRBoolean OGRCurvePolygon::Equals( OGRGeometry * poOther ) const
 
 {
-    OGRCurvePolygon *poOPoly = (OGRCurvePolygon *) poOther;
-
-    if( poOPoly == this )
+    if( poOther == this )
         return TRUE;
     
     if( poOther->getGeometryType() != getGeometryType() )
@@ -579,6 +574,7 @@ OGRBoolean OGRCurvePolygon::Equals( OGRGeometry * poOther ) const
     if ( IsEmpty() && poOther->IsEmpty() )
         return TRUE;
     
+    OGRCurvePolygon *poOPoly = (OGRCurvePolygon *) poOther;
     return oCC.Equals( &(poOPoly->oCC) );
 }
 

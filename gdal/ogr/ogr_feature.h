@@ -117,6 +117,9 @@ class CPL_DLL OGRFieldDefn
     void                SetNullable( int bNullableIn ) { bNullable = bNullableIn; }
 
     int                 IsSame( const OGRFieldDefn * ) const;
+
+  private:
+    CPL_DISALLOW_COPY_ASSIGN(OGRFieldDefn);
 };
 
 /************************************************************************/
@@ -171,6 +174,9 @@ public:
         void                SetNullable( int bNullableIn ) { bNullable = bNullableIn; }
 
         int                 IsSame( OGRGeomFieldDefn * );
+
+  private:
+    CPL_DISALLOW_COPY_ASSIGN(OGRGeomFieldDefn);
 };
 
 /************************************************************************/
@@ -201,7 +207,7 @@ class CPL_DLL OGRFeatureDefn
 {
   protected:
     volatile int nRefCount;
-    
+
     int         nFieldCount;
     OGRFieldDefn **papoFieldDefn;
 
@@ -211,7 +217,7 @@ class CPL_DLL OGRFeatureDefn
     char        *pszFeatureClassName;
 
     int         bIgnoreStyle;
-    
+
   public:
                 OGRFeatureDefn( const char * pszName = NULL );
     virtual    ~OGRFeatureDefn();
@@ -252,6 +258,9 @@ class CPL_DLL OGRFeatureDefn
 
     static OGRFeatureDefn  *CreateFeatureDefn( const char *pszName = NULL );
     static void         DestroyFeatureDefn( OGRFeatureDefn * );
+
+  private:
+    CPL_DISALLOW_COPY_ASSIGN(OGRFeatureDefn);
 };
 
 /************************************************************************/
@@ -427,6 +436,9 @@ class CPL_DLL OGRFeature
 
     static OGRFeature  *CreateFeature( OGRFeatureDefn * );
     static void         DestroyFeature( OGRFeature * );
+
+  private:
+    CPL_DISALLOW_COPY_ASSIGN(OGRFeature);
 };
 
 /************************************************************************/

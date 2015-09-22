@@ -214,12 +214,11 @@ void GetCeosField(CeosRecord_t *record, int32 start_byte,
 	break;
 
     default:
-	/* Unknown format */
-	return;
+	/* Unknown format.  Do nothing. */
+        break;
     }
 
     HFree(mod_buf);
-
 }
 
 void SetCeosField(CeosRecord_t *record, int32 start_byte, char *format, void *value)
@@ -288,7 +287,8 @@ void SetCeosField(CeosRecord_t *record, int32 start_byte, char *format, void *va
 
     default:
 	/* Unknown format */
-	return;
+	HFree(temp_buf);
+        return;
     }
 
     memcpy(record->Buffer + start_byte -1, temp_buf, field_size);
@@ -366,7 +366,8 @@ void CeosUpdateHeaderFromBuffer(CeosRecord_t *record)
 	memcpy(&(record->TypeCode.Int32Code),record->Buffer+__TYPE_OFF,sizeof(record->TypeCode.Int32Code));
 	CeosToNative(&(record->Sequence),record->Buffer+__SEQUENCE_OFF,sizeof(record->Sequence ), sizeof( record->Sequence ) );
     }
-    record->Subsequence = 0;
+    if(record)
+        record->Subsequence = 0;
 }
 
 #ifdef CPL_LSB

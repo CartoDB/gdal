@@ -316,9 +316,7 @@ GDALDataset* SRTMHGTDataset::Open(GDALOpenInfo* poOpenInfo)
 /* -------------------------------------------------------------------- */
 /*      Create a corresponding GDALDataset.                             */
 /* -------------------------------------------------------------------- */
-  SRTMHGTDataset* poDS;
-
-  poDS = new SRTMHGTDataset();
+  SRTMHGTDataset* poDS  = new SRTMHGTDataset();
 
 /* -------------------------------------------------------------------- */
 /*      Open the file using the large file api.                         */
@@ -326,13 +324,15 @@ GDALDataset* SRTMHGTDataset::Open(GDALOpenInfo* poOpenInfo)
   poDS->fpImage = VSIFOpenL(poOpenInfo->pszFilename, (poOpenInfo->eAccess == GA_Update) ? "rb+" : "rb");
   if(poDS->fpImage == NULL)
   {
-    CPLError(CE_Failure, CPLE_OpenFailed, "VSIFOpenL(%s) failed unexpectedly in srtmhgtdataset.cpp", poOpenInfo->pszFilename);
-    return NULL;
+      CPLError(CE_Failure, CPLE_OpenFailed, "VSIFOpenL(%s) failed unexpectedly in srtmhgtdataset.cpp", poOpenInfo->pszFilename);
+      delete poDS;
+      return NULL;
   }
 
   VSIStatBufL fileStat;
   if(VSIStatL(poOpenInfo->pszFilename, &fileStat) != 0)
   {
+      delete poDS;
       return NULL;
   }
   int numPixels = (fileStat.st_size == 25934402) ? 3601 : /* 2884802 */ 1201;
@@ -392,9 +392,9 @@ GDALDataset * SRTMHGTDataset::CreateCopy( const char * pszFilename,
                                           GDALProgressFunc pfnProgress,
                                           void * pProgressData )
 {
-    int  nBands = poSrcDS->GetRasterCount();
-    int  nXSize = poSrcDS->GetRasterXSize();
-    int  nYSize = poSrcDS->GetRasterYSize();
+    const int nBands = poSrcDS->GetRasterCount();
+    const int nXSize = poSrcDS->GetRasterXSize();
+    const int nYSize = poSrcDS->GetRasterYSize();
 
     if( pfnProgress && !pfnProgress( 0.0, NULL, pProgressData ) )
         return NULL;

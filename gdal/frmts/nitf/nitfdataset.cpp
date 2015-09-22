@@ -63,24 +63,15 @@ static void SetBandMetadata( NITFImage *psImage, GDALRasterBand *poBand, int nBa
 /*                            NITFDataset()                             */
 /************************************************************************/
 
-NITFDataset::NITFDataset()
-
+NITFDataset::NITFDataset() :
+    psFile(NULL), psImage(NULL), poJ2KDataset(NULL), bJP2Writing(FALSE),
+    poJPEGDataset(NULL), bGotGeoTransform(FALSE), nGCPCount(0),
+    pasGCPList(NULL), pszGCPProjection(NULL), panJPEGBlockOffset(NULL),
+    pabyJPEGBlock(NULL), nQLevel(0), nIMIndex(0), papszTextMDToWrite(NULL),
+    papszCgmMDToWrite(NULL), bInLoadXML(FALSE),
+    bExposeUnderlyingJPEGDatasetOverviews(FALSE)
 {
-    psFile = NULL;
-    psImage = NULL;
-    bGotGeoTransform = FALSE;
     pszProjection = CPLStrdup("");
-    poJ2KDataset = NULL;
-    bJP2Writing = FALSE;
-    poJPEGDataset = NULL;
-
-    panJPEGBlockOffset = NULL;
-    pabyJPEGBlock = NULL;
-    nQLevel = 0;
-
-    nGCPCount = 0;
-    pasGCPList = NULL;
-    pszGCPProjection = NULL;
 
     adfGeoTransform[0] = 0.0;
     adfGeoTransform[1] = 1.0;
@@ -88,14 +79,8 @@ NITFDataset::NITFDataset()
     adfGeoTransform[3] = 0.0;
     adfGeoTransform[4] = 0.0;
     adfGeoTransform[5] = 1.0;
-    
-    poDriver = (GDALDriver*) GDALGetDriverByName("NITF");
 
-    papszTextMDToWrite = NULL;
-    papszCgmMDToWrite = NULL;
-    
-    bInLoadXML = FALSE;
-    bExposeUnderlyingJPEGDatasetOverviews = FALSE;
+    poDriver = (GDALDriver*) GDALGetDriverByName("NITF");
 }
 
 /************************************************************************/
@@ -236,10 +221,12 @@ void NITFDataset::FlushCache()
     // If the JPEG/JP2K dataset has dirty pam info, then we should consider 
     // ourselves to as well.
     if( poJPEGDataset != NULL 
-        && (poJPEGDataset->GetPamFlags() & GPF_DIRTY) )
+        && (poJPEGDataset->GetMOFlags() & GMO_PAM_CLASS)
+        && (((GDALPamDataset*)poJPEGDataset)->GetPamFlags() & GPF_DIRTY) )
         MarkPamDirty();
     if( poJ2KDataset != NULL 
-        && (poJ2KDataset->GetPamFlags() & GPF_DIRTY) )
+        && (poJ2KDataset->GetMOFlags() & GMO_PAM_CLASS)
+        && (((GDALPamDataset*)poJ2KDataset)->GetPamFlags() & GPF_DIRTY) )
         MarkPamDirty();
 
     if( poJ2KDataset != NULL && bJP2Writing)
@@ -607,18 +594,17 @@ GDALDataset *NITFDataset::OpenInternal( GDALOpenInfo * poOpenInfo,
     
         if( poWritableJ2KDataset != NULL )
         {
-            poDS->poJ2KDataset = (GDALPamDataset *) poWritableJ2KDataset; 
+            poDS->poJ2KDataset = poWritableJ2KDataset; 
             poDS->bJP2Writing = TRUE;
             poWritableJ2KDataset = NULL;
         }
         else
         {
             /* We explicitly list the allowed drivers to avoid hostile content */
-            /* to be opened by a random driver, and also to make sure that */
-            /* a future new JPEG2000 compatible driver derives from GDALPamDataset */
+            /* to be opened by a random driver */
             static const char * const apszDrivers[] = { "JP2KAK", "JP2ECW", "JP2MRSID",
                                                         "JPEG2000", "JP2OPENJPEG", NULL };
-            poDS->poJ2KDataset = (GDALPamDataset *)
+            poDS->poJ2KDataset = (GDALDataset*)
                 GDALOpenEx( osDSName, GDAL_OF_RASTER, apszDrivers, NULL, NULL);
 
             if( poDS->poJ2KDataset == NULL )
@@ -640,8 +626,11 @@ GDALDataset *NITFDataset::OpenInternal( GDALOpenInfo * poOpenInfo,
                 return NULL;
             }
 
-            poDS->poJ2KDataset->SetPamFlags( 
-                poDS->poJ2KDataset->GetPamFlags() | GPF_NOSAVE );
+            if (poDS->poJ2KDataset->GetMOFlags() & GMO_PAM_CLASS)
+            {
+                ((GDALPamDataset*)poDS->poJ2KDataset)->SetPamFlags( 
+                    ((GDALPamDataset*)poDS->poJ2KDataset)->GetPamFlags() | GPF_NOSAVE );
+            }
         }
 
         if( poDS->GetRasterXSize() != poDS->poJ2KDataset->GetRasterXSize()
@@ -713,7 +702,7 @@ GDALDataset *NITFDataset::OpenInternal( GDALOpenInfo * poOpenInfo,
         CPLDebug( "GDAL", 
                   "NITFDataset::Open() as IC=C3 (JPEG compressed)\n");
 
-        poDS->poJPEGDataset = (GDALPamDataset*) GDALOpen(osDSName,GA_ReadOnly);
+        poDS->poJPEGDataset = (GDALDataset*) GDALOpen(osDSName,GA_ReadOnly);
         if( poDS->poJPEGDataset == NULL )
         {
             int bFoundJPEGDriver = GDALGetDriverByName("JPEG") != NULL;
@@ -739,8 +728,11 @@ GDALDataset *NITFDataset::OpenInternal( GDALOpenInfo * poOpenInfo,
             return NULL;
         }
 
-        poDS->poJPEGDataset->SetPamFlags( 
-            poDS->poJPEGDataset->GetPamFlags() | GPF_NOSAVE );
+        if (poDS->poJPEGDataset->GetMOFlags() & GMO_PAM_CLASS)
+        {
+            ((GDALPamDataset*)poDS->poJPEGDataset)->SetPamFlags( 
+                ((GDALPamDataset*)poDS->poJPEGDataset)->GetPamFlags() | GPF_NOSAVE );
+        }
 
         if( poDS->poJPEGDataset->GetRasterCount() < nUsableBands )
         {
@@ -1390,13 +1382,13 @@ GDALDataset *NITFDataset::OpenInternal( GDALOpenInfo * poOpenInfo,
             CPLsprintf( szValue+strlen(szValue), "%.16g ",  
                      sRPCInfo.LINE_DEN_COEFF[i] );
         poDS->SetMetadataItem( "LINE_DEN_COEFF", szValue, "RPC" );
-        
+
         szValue[0] = '\0'; 
         for( i = 0; i < 20; i++ )
             CPLsprintf( szValue+strlen(szValue), "%.16g ",  
                      sRPCInfo.SAMP_NUM_COEFF[i] );
         poDS->SetMetadataItem( "SAMP_NUM_COEFF", szValue, "RPC" );
-        
+
         szValue[0] = '\0'; 
         for( i = 0; i < 20; i++ )
             CPLsprintf( szValue+strlen(szValue), "%.16g ",  
@@ -1430,71 +1422,73 @@ GDALDataset *NITFDataset::OpenInternal( GDALOpenInfo * poOpenInfo,
     {
         char szValue[1280];
 
-        CPLsprintf( szValue, "%.16g", sChipInfo.SCALE_FACTOR );
+        CPLsnprintf( szValue, sizeof(szValue), "%.16g", sChipInfo.SCALE_FACTOR );
         poDS->SetMetadataItem( "ICHIP_SCALE_FACTOR", szValue );
 
-        sprintf( szValue, "%d", sChipInfo.ANAMORPH_CORR );
+        // TODO: Why do these two not use CPLsnprintf?
+        snprintf( szValue, sizeof(szValue), "%d", sChipInfo.ANAMORPH_CORR );
         poDS->SetMetadataItem( "ICHIP_ANAMORPH_CORR", szValue );
 
-        sprintf( szValue, "%d", sChipInfo.SCANBLK_NUM );
+        snprintf( szValue, sizeof(szValue), "%d", sChipInfo.SCANBLK_NUM );
         poDS->SetMetadataItem( "ICHIP_SCANBLK_NUM", szValue );
 
-        CPLsprintf( szValue, "%.16g", sChipInfo.OP_ROW_11 );
+        CPLsnprintf( szValue, sizeof(szValue), "%.16g", sChipInfo.OP_ROW_11 );
         poDS->SetMetadataItem( "ICHIP_OP_ROW_11", szValue );
 
-        CPLsprintf( szValue, "%.16g", sChipInfo.OP_COL_11 );
+        CPLsnprintf( szValue, sizeof(szValue), "%.16g", sChipInfo.OP_COL_11 );
         poDS->SetMetadataItem( "ICHIP_OP_COL_11", szValue );
 
-        CPLsprintf( szValue, "%.16g", sChipInfo.OP_ROW_12 );
+        CPLsnprintf( szValue, sizeof(szValue), "%.16g", sChipInfo.OP_ROW_12 );
         poDS->SetMetadataItem( "ICHIP_OP_ROW_12", szValue );
 
-        CPLsprintf( szValue, "%.16g", sChipInfo.OP_COL_12 );
+        CPLsnprintf( szValue, sizeof(szValue), "%.16g", sChipInfo.OP_COL_12 );
         poDS->SetMetadataItem( "ICHIP_OP_COL_12", szValue );
 
-        CPLsprintf( szValue, "%.16g", sChipInfo.OP_ROW_21 );
+        CPLsnprintf( szValue, sizeof(szValue), "%.16g", sChipInfo.OP_ROW_21 );
         poDS->SetMetadataItem( "ICHIP_OP_ROW_21", szValue );
 
-        CPLsprintf( szValue, "%.16g", sChipInfo.OP_COL_21 );
+        CPLsnprintf( szValue, sizeof(szValue), "%.16g", sChipInfo.OP_COL_21 );
         poDS->SetMetadataItem( "ICHIP_OP_COL_21", szValue );
 
-        CPLsprintf( szValue, "%.16g", sChipInfo.OP_ROW_22 );
+        CPLsnprintf( szValue, sizeof(szValue), "%.16g", sChipInfo.OP_ROW_22 );
         poDS->SetMetadataItem( "ICHIP_OP_ROW_22", szValue );
 
-        CPLsprintf( szValue, "%.16g", sChipInfo.OP_COL_22 );
+        CPLsnprintf( szValue, sizeof(szValue), "%.16g", sChipInfo.OP_COL_22 );
         poDS->SetMetadataItem( "ICHIP_OP_COL_22", szValue );
 
-        CPLsprintf( szValue, "%.16g", sChipInfo.FI_ROW_11 );
+        CPLsnprintf( szValue, sizeof(szValue), "%.16g", sChipInfo.FI_ROW_11 );
         poDS->SetMetadataItem( "ICHIP_FI_ROW_11", szValue );
 
-        CPLsprintf( szValue, "%.16g", sChipInfo.FI_COL_11 );
+        CPLsnprintf( szValue, sizeof(szValue), "%.16g", sChipInfo.FI_COL_11 );
         poDS->SetMetadataItem( "ICHIP_FI_COL_11", szValue );
 
-        CPLsprintf( szValue, "%.16g", sChipInfo.FI_ROW_12 );
+        CPLsnprintf( szValue, sizeof(szValue), "%.16g", sChipInfo.FI_ROW_12 );
         poDS->SetMetadataItem( "ICHIP_FI_ROW_12", szValue );
 
-        CPLsprintf( szValue, "%.16g", sChipInfo.FI_COL_12 );
+        CPLsnprintf( szValue, sizeof(szValue), "%.16g", sChipInfo.FI_COL_12 );
         poDS->SetMetadataItem( "ICHIP_FI_COL_12", szValue );
 
-        CPLsprintf( szValue, "%.16g", sChipInfo.FI_ROW_21 );
+        CPLsnprintf( szValue, sizeof(szValue), "%.16g", sChipInfo.FI_ROW_21 );
         poDS->SetMetadataItem( "ICHIP_FI_ROW_21", szValue );
 
-        CPLsprintf( szValue, "%.16g", sChipInfo.FI_COL_21 );
+        CPLsnprintf( szValue, sizeof(szValue), "%.16g", sChipInfo.FI_COL_21 );
         poDS->SetMetadataItem( "ICHIP_FI_COL_21", szValue );
 
-        CPLsprintf( szValue, "%.16g", sChipInfo.FI_ROW_22 );
+        CPLsnprintf( szValue, sizeof(szValue), "%.16g", sChipInfo.FI_ROW_22 );
         poDS->SetMetadataItem( "ICHIP_FI_ROW_22", szValue );
 
-        CPLsprintf( szValue, "%.16g", sChipInfo.FI_COL_22 );
+        CPLsnprintf( szValue, sizeof(szValue), "%.16g", sChipInfo.FI_COL_22 );
         poDS->SetMetadataItem( "ICHIP_FI_COL_22", szValue );
 
-        sprintf( szValue, "%d", sChipInfo.FI_ROW );
+        // Why not CPLsnprintf?
+        snprintf( szValue, sizeof(szValue), "%d", sChipInfo.FI_ROW );
         poDS->SetMetadataItem( "ICHIP_FI_ROW", szValue );
 
-        sprintf( szValue, "%d", sChipInfo.FI_COL );
+        snprintf( szValue, sizeof(szValue), "%d", sChipInfo.FI_COL );
         poDS->SetMetadataItem( "ICHIP_FI_COL", szValue );
 
     }
-    
+
     const NITFSeries* series = NITFGetSeriesInfo(pszFilename);
     if (series)
     {
@@ -1594,12 +1588,12 @@ GDALDataset *NITFDataset::OpenInternal( GDALOpenInfo * poOpenInfo,
 /*      If we have jpeg, or jpeg2000 bands we may need to clear         */
 /*      their PAM dirty flag too.                                       */
 /* -------------------------------------------------------------------- */
-    if( poDS->poJ2KDataset != NULL )
-        poDS->poJ2KDataset->SetPamFlags( 
-            poDS->poJ2KDataset->GetPamFlags() & ~GPF_DIRTY );
-    if( poDS->poJPEGDataset != NULL )
-        poDS->poJPEGDataset->SetPamFlags( 
-            poDS->poJPEGDataset->GetPamFlags() & ~GPF_DIRTY );
+    if( poDS->poJ2KDataset != NULL && (poDS->poJ2KDataset->GetMOFlags() & GMO_PAM_CLASS) )
+        ((GDALPamDataset*)poDS->poJ2KDataset)->SetPamFlags( 
+            ((GDALPamDataset*)poDS->poJ2KDataset)->GetPamFlags() & ~GPF_DIRTY );
+    if( poDS->poJPEGDataset != NULL && (poDS->poJPEGDataset->GetMOFlags() & GMO_PAM_CLASS) )
+        ((GDALPamDataset*)poDS->poJPEGDataset)->SetPamFlags( 
+            ((GDALPamDataset*)poDS->poJPEGDataset)->GetPamFlags() & ~GPF_DIRTY );
 
 /* -------------------------------------------------------------------- */
 /*      Check for overviews.                                            */
@@ -2507,6 +2501,7 @@ void NITFDataset::InitializeNITFMetadata()
     {
         CPLError(CE_Failure, CPLE_AppDefined, 
                  "Failed to encode NITF file header!");
+        CPLFree(encodedHeader);
         return;
     }
 
@@ -2525,7 +2520,7 @@ void NITFDataset::InitializeNITFMetadata()
     // Get the image subheader length.
 
     int nImageSubheaderLen = 0;
-    
+
     for( int i = 0; i < psFile->nSegmentCount; ++i )
     {
         if (strncmp(psFile->pasSegmentInfo[i].szSegmentType, "IM", 2) == 0)
@@ -2544,17 +2539,18 @@ void NITFDataset::InitializeNITFMetadata()
     if( nImageSubheaderLen > 0 )
     {
         char *encodedImageSubheader = CPLBase64Encode(nImageSubheaderLen,(GByte*) psImage->pachHeader);
-    
-        if( encodedImageSubheader == NULL || strlen(encodedImageSubheader) ==0 )
+
+        if( encodedImageSubheader == NULL || strlen(encodedImageSubheader) == 0 )
         {
-            CPLError(CE_Failure, CPLE_AppDefined, 
+            CPLError(CE_Failure, CPLE_AppDefined,
                      "Failed to encode image subheader!");
+            CPLFree( encodedImageSubheader );
             return;
         }
 
         // The length of the image subheader plus a space is append to the beginning of the encoded string so
         // that we can recover the actual length of the image subheader when we decode it.
-      
+
         char buffer[20];
 
         sprintf(buffer, "%d", nImageSubheaderLen);
@@ -2821,18 +2817,20 @@ void NITFDataset::InitializeTREMetadata()
                 NITFGetField(szTemp, pszTREData, 0, 6 );
                 CPLError(CE_Failure, CPLE_AppDefined, "Invalid size (%d) for TRE %s",
                         nThisTRESize, szTemp);
+                CPLDestroyXMLNode(psTresNode);
                 return;
             }
             if (nThisTRESize > nTREBytes - 11)
             {
                 CPLError(CE_Failure, CPLE_AppDefined, "Not enough bytes in TRE");
+                CPLDestroyXMLNode(psTresNode);
                 return;
             }
 
             strncpy( szTag, pszTREData, 6 );
             szTag[6] = '\0';
 
-            // trim white off tag. 
+            // trim white off tag.
             while( strlen(szTag) > 0 && szTag[strlen(szTag)-1] == ' ' )
                 szTag[strlen(szTag)-1] = '\0';
 
@@ -2844,7 +2842,7 @@ void NITFDataset::InitializeTREMetadata()
                 CPLAddXMLChild(psTresNode, psTreNode);
             }
 
-            // escape data. 
+            // escape data.
             pszEscapedData = CPLEscapeString( pszTREData + 11,
                                               nThisTRESize,
                                               CPLES_BackslashQuotable );
@@ -2864,7 +2862,7 @@ void NITFDataset::InitializeTREMetadata()
             }
             oSpecialMD.SetMetadataItem( szUniqueTag, pszEscapedData, "TRE" );
             CPLFree( pszEscapedData );
-            
+
             nTREBytes -= (nThisTRESize + 11);
             pszTREData += (nThisTRESize + 11);
         }
@@ -3266,7 +3264,7 @@ CPLErr NITFDataset::IBuildOverviews( const char *pszResampling,
 /* -------------------------------------------------------------------- */
     if( poJ2KDataset != NULL 
         && !poJ2KDataset->GetMetadataItem( "OVERVIEW_FILE", "OVERVIEWS" ) )
-        poJ2KDataset->IBuildOverviews( pszResampling, 0, NULL, 
+        poJ2KDataset->BuildOverviews( pszResampling, 0, NULL, 
                                        nListBands, panBandList, 
                                        GDALDummyProgress, NULL );
 
@@ -4922,7 +4920,6 @@ static int NITFWriteCGMSegments( const char *pszFilename, char **papszList)
 
         memset(achGSH, ' ', sizeof(achGSH));
 
-
         PLACE( achGSH+ 0, SY , "SY" );
         PLACE( achGSH+ 2, SID ,CPLSPrintf("%010d", i) );
         PLACE( achGSH+ 12, SNAME , "DEFAULT NAME        " );
@@ -4938,6 +4935,7 @@ static int NITFWriteCGMSegments( const char *pszFilename, char **papszList)
         PLACE( achGSH+240, SCOLOR, "C" );
         PLACE( achGSH+241, SBAND2, "0000000000" );
         PLACE( achGSH+251, SRES2, "00" );
+        // coverity[buffer_size] - No need to be a NUL terminated string.
         PLACE( achGSH+253, SXSHDL, "00000" );
 
         // Move to the end of the file
@@ -5220,6 +5218,7 @@ static void NITFWriteTextSegments( const char *pszFilename,
             PLACE( achTSH+106, TSCLAS        , "U"                           );
             PLACE( achTSH+273, ENCRYP        , "0"                           );
             PLACE( achTSH+274, TXTFMT        , "STA"                         );
+            // coverity[buffer_size] - No need to be a NUL terminated string.
             PLACE( achTSH+277, TXSHDL        , "00000"                       );
         }
 
@@ -5240,7 +5239,7 @@ static void NITFWriteTextSegments( const char *pszFilename,
         }
 
         VSIFWriteL( pszTextToWrite, 1, nTextLength, fpVSIL );
-        
+
 /* -------------------------------------------------------------------- */
 /*      Update the subheader and data size info in the file header.     */
 /* -------------------------------------------------------------------- */

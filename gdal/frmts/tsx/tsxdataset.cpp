@@ -219,9 +219,10 @@ CPLErr TSXRasterBand::IReadBlock( int nBlockXOff, int nBlockYOff,
 /*                             TSXDataset()                             */
 /************************************************************************/
 
-TSXDataset::TSXDataset() {
-    nGCPCount = 0;
-    pasGCPList = NULL;
+TSXDataset::TSXDataset() :
+    nGCPCount(0), pasGCPList(NULL), pszGCPProjection(NULL), pszProjection(NULL),
+    bHaveGeoTransform(false), nProduct(eUnknown)
+{
     pszGCPProjection = CPLStrdup("");
     pszProjection = CPLStrdup("");
     adfGeoTransform[0] = 0.0;
@@ -230,7 +231,6 @@ TSXDataset::TSXDataset() {
     adfGeoTransform[3] = 0.0;
     adfGeoTransform[4] = 0.0;
     adfGeoTransform[5] = 1.0;
-    bHaveGeoTransform = FALSE;
 }
 
 /************************************************************************/
@@ -567,6 +567,7 @@ GDALDataset *TSXDataset::Open( GDALOpenInfo *poOpenInfo ) {
             }
             else if (EQUALN(pszType, "GEOREF", 6)) {
                 /* save the path to the georef data for later use */
+                CPLFree( pszGeorefFile );
                 pszGeorefFile = CPLStrdup( pszPath );
             }
         }
@@ -813,4 +814,3 @@ void GDALRegister_TSX() {
         GetGDALDriverManager()->RegisterDriver( poDriver );
     }
 }
-

@@ -152,7 +152,7 @@ driver includes support for reading and writing .bt 1.3 format including
 support for Int16, Int32 and Float32 pixel data types.</p>
 
 <p>The driver does
-<b>not</b> support reading or writting gzipped (.bt.gz) .bt files even
+<b>not</b> support reading or writing gzipped (.bt.gz) .bt files even
 though this is supported by the VTP software.  Please unpack the files
 before using with GDAL using the "gzip -d file.bt.gz".</p>
 
@@ -378,13 +378,14 @@ Starting with GDAL 1.9.0
 that uses the table of content file, TOC.xml, and exposes it as a virtual dataset whose
 coverage is the set of ECRG frames contained in the table of content.</p>
 <p>The driver will report a different subdataset for each subdataset found in the TOC.xml
-file.</p>
+file. Each subdataset consists of the frames of same product id, disk id, and starting
+with GDAL 1.11.3, with same scale.</p>
 
 <p>Result of a gdalinfo on a TOC.xml file.</p>
 <pre>
 Subdatasets:
-  SUBDATASET_1_NAME=ECRG_TOC_ENTRY:ECRG:FalconView:ECRG_Sample/EPF/TOC.xml
-  SUBDATASET_1_DESC=ECRG:FalconView
+  SUBDATASET_1_NAME=ECRG_TOC_ENTRY:ECRG:FalconView:1_500_K:ECRG_Sample/EPF/TOC.xml
+  SUBDATASET_1_DESC=Product ECRG, Disk FalconView, Scale 1:500 K
 </pre>
 
 <p>See Also:</p>

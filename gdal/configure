@@ -631,6 +631,8 @@ ac_includes_default="\
 
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
+USE_ONLY_CRYPTODLL_ALG
+HAVE_CRYPTOPP
 HAVE_ARMADILLO
 RASDAMAN_LIB
 RASDAMAN_INC
@@ -652,14 +654,20 @@ GDAL_VERSION_MINOR
 GDAL_VERSION_MAJOR
 PROJ_INCLUDE
 PROJ_STATIC
+PDFIUM_PLUGIN_LIB
+PDFIUM_INC
+HAVE_PDFIUM
+PODOFO_PLUGIN_LIB
 PODOFO_INC
 HAVE_PODOFO
+POPPLER_PLUGIN_LIB
 POPPLER_INC
 POPPLER_0_23_OR_LATER
 POPPLER_0_20_OR_LATER
 POPPLER_BASE_STREAM_HAS_TWO_ARGS
 POPPLER_HAS_OPTCONTENT
 HAVE_POPPLER
+PDF_PLUGIN
 PAM_SETTING
 JSON_INCLUDE
 LIBJSONC_SETTING
@@ -706,9 +714,12 @@ HAVE_OCI
 ODBC_SETTING
 LIBKML_INCLUDE
 HAVE_LIBKML
-LIBKML_VERSION
 LIBKML_LDFLAGS
+LIBKML_VERSION
+LIBKML_LDLAGS
+LIBKML_LIBS
 LIBKML_CFLAGS
+PKG_CONFIG
 EXPAT_INCLUDE
 HAVE_EXPAT
 EXPAT_VERSION
@@ -994,10 +1005,14 @@ with_opencl_lib
 with_freexl
 with_libjson_c
 with_pam
+enable_pdf_plugin
 with_poppler
 with_podofo
 with_podofo_lib
 with_podofo_extra_lib_for_test
+with_pdfium
+with_pdfium_lib
+with_pdfium_extra_lib_for_test
 with_static_proj4
 with_gdal_ver
 with_
@@ -1010,6 +1025,7 @@ with_jvm_lib
 with_jvm_lib_add_rpath
 with_rasdaman
 with_armadillo
+with_cryptopp
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1023,7 +1039,10 @@ CXX
 CXXFLAGS
 CCC
 CPP
-CXXCPP'
+CXXCPP
+PKG_CONFIG
+LIBKML_CFLAGS
+LIBKML_LIBS'
 
 
 # Initialize some variables set by options.
@@ -1642,6 +1661,8 @@ Optional Features:
   --disable-libtool-lock  avoid locking (might break parallel builds)
   --enable-debug          enable debugging (disabled by default)
   --disable-rpath         do not hardcode runtime library paths
+  --enable-pdf-plugin     enable PDF driver as a plugin (included in libgdal
+                          by default)
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -1751,6 +1772,9 @@ Optional Packages:
   --with-podofo=ARG    Include podofo(for PDF) support (ARG=no(default), yes or podofo install path)
   --with-podofo-lib=ARG   podofo Link Flags (ie. -L/xxx -lpodofo ...). Mainly for static libpodofo
   --with-podofo-extra-lib-for-test=ARG   Additional libraries to pass the detection test, but not used for libgdal linking (ie. -ljpeg ...). Mainly for static libpodofo
+  --with-pdfium=ARG    Include pdfium (for PDF) support (ARG=no(default), yes or pdfium install path)
+  --with-pdfium-lib=ARG   pdfium Link Flags (ie. -L/xxx -lpdfium ...). Mainly for static libpdfium
+  --with-pdfium-extra-lib-for-test=ARG   Additional libraries to pass the detection test, but not used for libgdal linking (ie. -ljpeg ...). Mainly for static libpdfium
   --with-static-proj4=ARG Compile with PROJ.4 statically (ARG=no or path)
   --with-gdal-ver=ARG   Override GDAL version
   --with-macosx-framework         Build and install GDAL as a Mac OS X Framework
@@ -1763,6 +1787,7 @@ Optional Packages:
   --with-jvm-lib-add-rpath    Add the libjvm path to the RPATH (no by default)
   --with-rasdaman=DIR        Include rasdaman support (DIR is rasdaman's install dir).
   --with-armadillo=ARG       Include Armadillo support for faster TPS transform computation (ARG=yes/no/path to armadillo install root) [default=no]
+  --with-cryptopp=ARG       Include cryptopp support (ARG=yes, no or path)
 
 Some influential environment variables:
   CC          C compiler command
@@ -1776,6 +1801,10 @@ Some influential environment variables:
   CXXFLAGS    C++ compiler flags
   CPP         C preprocessor
   CXXCPP      C++ preprocessor
+  PKG_CONFIG  path to pkg-config utility
+  LIBKML_CFLAGS
+              C compiler flags for LIBKML, overriding pkg-config
+  LIBKML_LIBS linker flags for LIBKML, overriding pkg-config
 
 Use these variables to override the choices made by `configure' or to help
 it to find libraries and programs with nonstandard names/locations.
@@ -3856,7 +3885,7 @@ ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
  ac_save_CFLAGS="$CFLAGS"
-for ac_arg in "-pedantic -Wdeclaration-after-statement -Wunused-parameter %        -Wall -Wdeclaration-after-statement -Wunused-parameter"    "-pedantic -Wdeclaration-after-statement %        -Wall -Wdeclaration-after-statement"    "-pedantic  % -Wall"          "-xstrconst % -v"             "-std1      % -verbose -w0 -warnprotos"    "-qlanglvl=ansi % -qsrcmsg -qinfo=all:noppt:noppc:noobs:nocnd"    "-ansi -ansiE % -fullwarn"    "+ESlit     % +w1"            "-Xc        % -pvctl,fullmsg"    "-h conform % -h msglevel 2"    #
+for ac_arg in "-pedantic -Wdeclaration-after-statement %        -Wall -Wdeclaration-after-statement"    "-pedantic  % -Wall"          "-xstrconst % -v"             "-std1      % -verbose -w0 -warnprotos"    "-qlanglvl=ansi % -qsrcmsg -qinfo=all:noppt:noppc:noobs:nocnd"    "-ansi -ansiE % -fullwarn"    "+ESlit     % +w1"            "-Xc        % -pvctl,fullmsg"    "-h conform % -h msglevel 2"    #
 do CFLAGS="$ac_save_CFLAGS "`echo $ac_arg | sed -e 's,%%.*,,' -e 's,%,,'`
    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
@@ -4178,7 +4207,7 @@ ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ex
 ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
 
  ac_save_CXXFLAGS="$CXXFLAGS"
-for ac_arg in "-pedantic  % -Wall -Wunused-parameter"          "-pedantic  % -Wall"          "-xstrconst % -v"             "-std1      % -verbose -w0 -warnprotos"    "-qlanglvl=ansi % -qsrcmsg -qinfo=all:noppt:noppc:noobs:nocnd"    "-ansi -ansiE % -fullwarn"    "+ESlit     % +w1"            "-Xc        % -pvctl,fullmsg"    "-h conform % -h msglevel 2"    #
+for ac_arg in "-pedantic  % -Wall"          "-xstrconst % -v"             "-std1      % -verbose -w0 -warnprotos"    "-qlanglvl=ansi % -qsrcmsg -qinfo=all:noppt:noppc:noobs:nocnd"    "-ansi -ansiE % -fullwarn"    "+ESlit     % +w1"            "-Xc        % -pvctl,fullmsg"    "-h conform % -h msglevel 2"    #
 do CXXFLAGS="$ac_save_CXXFLAGS "`echo $ac_arg | sed -e 's,%%.*,,' -e 's,%,,'`
    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
@@ -24740,50 +24769,263 @@ else
 fi
 
 
-    LIBKML_CFLAGS=""
-    LIBKML_LDFLAGS=""
-    LIBKML_VERSION=""
 
-                run_libkml_test="no"
 
-    if test -n "$libkml_prefix"; then
-        libkml_include_dir="$libkml_prefix/include"
-        libkml_include_dir2="$libkml_prefix/include/kml"
-        libkml_include_dir3="$libkml_prefix/include/kml/third_party/boost_1_34_1"
-        if test "$libkml_prefix" = "/usr"; then
-            libkml_lib_flags="-lkmldom -lkmlbase -lkmlengine -lkmlconvenience -lminizip -luriparser"
-        else
-            libkml_lib_flags="-L$libkml_prefix/lib -lkmldom -lkmlbase -lkmlengine -lkmlconvenience -lminizip -luriparser"
-        fi
-        run_libkml_test="yes"
-    elif test "$libkml_requested" = "yes"; then
-        if test -n "$libkml_include_dir" -a -n "$libkml_lib_flags"; then
-            libkml_include_dir2="$libkml_include_dir/kml"
-            libkml_include_dir3="$libkml_include_dir/kml/third_party/boost_1_34_1"
-            run_libkml_test="yes"
-        fi
+if test "x$ac_cv_env_PKG_CONFIG_set" != "xset"; then
+	if test -n "$ac_tool_prefix"; then
+  # Extract the first word of "${ac_tool_prefix}pkg-config", so it can be a program name with args.
+set dummy ${ac_tool_prefix}pkg-config; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_PKG_CONFIG+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $PKG_CONFIG in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_PKG_CONFIG="$PKG_CONFIG" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_PKG_CONFIG="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+PKG_CONFIG=$ac_cv_path_PKG_CONFIG
+if test -n "$PKG_CONFIG"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PKG_CONFIG" >&5
+$as_echo "$PKG_CONFIG" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+fi
+if test -z "$ac_cv_path_PKG_CONFIG"; then
+  ac_pt_PKG_CONFIG=$PKG_CONFIG
+  # Extract the first word of "pkg-config", so it can be a program name with args.
+set dummy pkg-config; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_ac_pt_PKG_CONFIG+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $ac_pt_PKG_CONFIG in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_ac_pt_PKG_CONFIG="$ac_pt_PKG_CONFIG" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_ac_pt_PKG_CONFIG="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+ac_pt_PKG_CONFIG=$ac_cv_path_ac_pt_PKG_CONFIG
+if test -n "$ac_pt_PKG_CONFIG"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_pt_PKG_CONFIG" >&5
+$as_echo "$ac_pt_PKG_CONFIG" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+  if test "x$ac_pt_PKG_CONFIG" = x; then
+    PKG_CONFIG=""
+  else
+    case $cross_compiling:$ac_tool_warned in
+yes:)
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
+$as_echo "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
+ac_tool_warned=yes ;;
+esac
+    PKG_CONFIG=$ac_pt_PKG_CONFIG
+  fi
+else
+  PKG_CONFIG="$ac_cv_path_PKG_CONFIG"
+fi
+
+fi
+if test -n "$PKG_CONFIG"; then
+	_pkg_min_version=0.25
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking pkg-config is at least version $_pkg_min_version" >&5
+$as_echo_n "checking pkg-config is at least version $_pkg_min_version... " >&6; }
+	if $PKG_CONFIG --atleast-pkgconfig-version $_pkg_min_version; then
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+	else
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+		PKG_CONFIG=""
+	fi
+
+fi # check and set $PKG_CONFIG
+
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for LIBKML" >&5
+$as_echo_n "checking for LIBKML... " >&6; }
+
+if test -n "$PKG_CONFIG"; then
+    if test -n "$LIBKML_CFLAGS"; then
+        pkg_cv_LIBKML_CFLAGS="$LIBKML_CFLAGS"
     else
-        run_libkml_test="no"
+        if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libkml >= \$LIBKML_REQ_VERSION\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libkml >= $LIBKML_REQ_VERSION") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_LIBKML_CFLAGS=`$PKG_CONFIG --cflags "libkml >= $LIBKML_REQ_VERSION" 2>/dev/null`
+else
+  pkg_failed=yes
+fi
     fi
+else
+	pkg_failed=untried
+fi
+if test -n "$PKG_CONFIG"; then
+    if test -n "$LIBKML_LIBS"; then
+        pkg_cv_LIBKML_LIBS="$LIBKML_LIBS"
+    else
+        if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libkml >= \$LIBKML_REQ_VERSION\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libkml >= $LIBKML_REQ_VERSION") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_LIBKML_LIBS=`$PKG_CONFIG --libs "libkml >= $LIBKML_REQ_VERSION" 2>/dev/null`
+else
+  pkg_failed=yes
+fi
+    fi
+else
+	pkg_failed=untried
+fi
 
-                if test "$run_libkml_test" = "yes"; then
 
-        saved_CPPFLAGS="$CPPFLAGS"
-        CPPFLAGS="$CPPFLAGS -I$libkml_include_dir -I$libkml_include_dir2 -I$libkml_include_dir3"
 
-        saved_LIBS="$LIBS"
-        LIBS="$LIBS $libkml_lib_flags"
+if test $pkg_failed = yes; then
 
-                                { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Google libkml headers in $libkml_include_dir, $libkml_include_dir2, and $libkml_include_dir3" >&5
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        LIBKML_PKG_ERRORS=`$PKG_CONFIG --short-errors --errors-to-stdout --print-errors "libkml >= $LIBKML_REQ_VERSION"`
+        else
+	        LIBKML_PKG_ERRORS=`$PKG_CONFIG --errors-to-stdout --print-errors "libkml >= $LIBKML_REQ_VERSION"`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$LIBKML_PKG_ERRORS" >&5
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+                LIBKML_VERSION=;
+elif test $pkg_failed = untried; then
+	LIBKML_VERSION=;
+else
+	LIBKML_CFLAGS=$pkg_cv_LIBKML_CFLAGS
+	LIBKML_LIBS=$pkg_cv_LIBKML_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+	LIBKML_VERSION=`$PKG_CONFIG --modversion libkml`
+fi
+
+    if test -n "$LIBKML_VERSION" -a -n "$libkml_prefix"; then
+        HAVE_LIBKML="yes"
+
+	LIBKML_LDFLAGS="$LIBKML_LIBS"
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for LIBKML CFLAGS" >&5
+$as_echo_n "checking for LIBKML CFLAGS... " >&6; }
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: $LIBKML_CFLAGS" >&5
+$as_echo "$LIBKML_CFLAGS" >&6; }
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for LIBKML LDFLAGS" >&5
+$as_echo_n "checking for LIBKML LDFLAGS... " >&6; }
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $LIBKML_LDFLAGS" >&5
+$as_echo "$LIBKML_LDFLAGS" >&6; }
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for LIBKML VERSION" >&5
+$as_echo_n "checking for LIBKML VERSION... " >&6; }
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $LIBKML_VERSION" >&5
+$as_echo "$LIBKML_VERSION" >&6; }
+
+
+
+
+    else
+        LIBKML_CFLAGS=""
+        LIBKML_LDFLAGS=""
+        LIBKML_VERSION=""
+
+                                run_libkml_test="no"
+
+        if test -n "$libkml_prefix"; then
+            libkml_include_dir="$libkml_prefix/include"
+            libkml_include_dir2="$libkml_prefix/include/kml"
+            libkml_include_dir3="$libkml_prefix/include/kml/third_party/boost_1_34_1"
+            if test "$libkml_prefix" = "/usr"; then
+                libkml_lib_flags="-lkmldom -lkmlbase -lkmlengine -lkmlconvenience -lminizip -luriparser"
+            else
+                libkml_lib_flags="-L$libkml_prefix/lib -lkmldom -lkmlbase -lkmlengine -lkmlconvenience -lminizip -luriparser"
+            fi
+            run_libkml_test="yes"
+        elif test "$libkml_requested" = "yes"; then
+            if test -n "$libkml_include_dir" -a -n "$libkml_lib_flags"; then
+                libkml_include_dir2="$libkml_include_dir/kml"
+                libkml_include_dir3="$libkml_include_dir/kml/third_party/boost_1_34_1"
+                run_libkml_test="yes"
+            fi
+        else
+            run_libkml_test="no"
+        fi
+
+                                if test "$run_libkml_test" = "yes"; then
+
+            saved_CPPFLAGS="$CPPFLAGS"
+            CPPFLAGS="$CPPFLAGS -I$libkml_include_dir -I$libkml_include_dir2 -I$libkml_include_dir3"
+
+            saved_LIBS="$LIBS"
+            LIBS="$LIBS $libkml_lib_flags"
+
+                                                { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Google libkml headers in $libkml_include_dir, $libkml_include_dir2, and $libkml_include_dir3" >&5
 $as_echo_n "checking for Google libkml headers in $libkml_include_dir, $libkml_include_dir2, and $libkml_include_dir3... " >&6; }
 
-        ac_ext=cpp
+            ac_ext=cpp
 ac_cpp='$CXXCPP $CPPFLAGS'
 ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
 
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+            cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
 
@@ -24800,39 +25042,39 @@ main ()
 _ACEOF
 if ac_fn_cxx_try_compile "$LINENO"; then :
 
-            LIBKML_CFLAGS="-I$libkml_include_dir -I$libkml_include_dir2 -I$libkml_include_dir3"
-            libkml_header_found="yes"
-            { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+                LIBKML_CFLAGS="-I$libkml_include_dir -I$libkml_include_dir2 -I$libkml_include_dir3"
+                libkml_header_found="yes"
+                { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
 $as_echo "found" >&6; }
 
 else
 
-            libkml_header_found="no"
-            { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+                libkml_header_found="no"
+                { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
 $as_echo "not found" >&6; }
 
 
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-        ac_ext=c
+            ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
-                                if test "$libkml_header_found" = "yes"; then
+                                                if test "$libkml_header_found" = "yes"; then
 
-            { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Google libkml libraries" >&5
+                { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Google libkml libraries" >&5
 $as_echo_n "checking for Google libkml libraries... " >&6; }
 
-            ac_ext=cpp
+                ac_ext=cpp
 ac_cpp='$CXXCPP $CPPFLAGS'
 ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
 
-            cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+                cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
 
@@ -24851,114 +25093,115 @@ kmldom::KmlFactory* factory = kmldom::KmlFactory::GetFactory();
 _ACEOF
 if ac_fn_cxx_try_link "$LINENO"; then :
 
-                LIBKML_LDFLAGS="$libkml_lib_flags"
-                libkml_lib_found="yes"
-                { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+                    LIBKML_LDFLAGS="$libkml_lib_flags"
+                    libkml_lib_found="yes"
+                    { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
 $as_echo "found" >&6; }
 
 else
 
-                libkml_lib_found="no"
-                { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+                    libkml_lib_found="no"
+                    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
 $as_echo "not found" >&6; }
 
 
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
-            ac_ext=c
+                ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
+            fi
+
+            CPPFLAGS="$saved_CPPFLAGS"
+            LIBS="$saved_LIBS"
         fi
 
-        CPPFLAGS="$saved_CPPFLAGS"
-        LIBS="$saved_LIBS"
-    fi
-
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Google libkml" >&5
+        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Google libkml" >&5
 $as_echo_n "checking for Google libkml... " >&6; }
 
-    if test "$run_libkml_test" = "yes"; then
-        if test "$libkml_header_found" = "yes" -a "$libkml_lib_found" = "yes"; then
+        if test "$run_libkml_test" = "yes"; then
+            if test "$libkml_header_found" = "yes" -a "$libkml_lib_found" = "yes"; then
 
 
 
 
-            HAVE_LIBKML="yes"
-        else
-            HAVE_LIBKML="no"
-        fi
+                HAVE_LIBKML="yes"
+            else
+                HAVE_LIBKML="no"
+            fi
 
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: $HAVE_LIBKML" >&5
+            { $as_echo "$as_me:${as_lineno-$LINENO}: result: $HAVE_LIBKML" >&5
 $as_echo "$HAVE_LIBKML" >&6; }
 
-                                if test "$HAVE_LIBKML" = "yes"; then
+                                                if test "$HAVE_LIBKML" = "yes"; then
 
-            libkml_version_req=$LIBKML_REQ_VERSION
+                libkml_version_req=$LIBKML_REQ_VERSION
 
-            if test  -n "$libkml_version_req"; then
+                if test  -n "$libkml_version_req"; then
 
-                { $as_echo "$as_me:${as_lineno-$LINENO}: checking if Google libkml version is >= $libkml_version_req" >&5
+                    { $as_echo "$as_me:${as_lineno-$LINENO}: checking if Google libkml version is >= $libkml_version_req" >&5
 $as_echo_n "checking if Google libkml version is >= $libkml_version_req... " >&6; }
 
-                if test -f "$libkml_include_dir2/base/version.h"; then
+                    if test -f "$libkml_include_dir2/base/version.h"; then
 
-                    libkml_major=$(sed -n '/^#define LIBKML_MAJOR_VERSION.*$/{s/\([^0-9]*\)\([0-9]*\).*/\2/;P;}' \
-		    	$libkml_include_dir2/base/version.h)
-                    libkml_minor=$(sed -n '/^#define LIBKML_MINOR_VERSION.*$/{s/\([^0-9]*\)\([0-9]*\).*/\2/;P;}' \
-		    	$libkml_include_dir2/base/version.h)
-                    libkml_revision=$(sed -n '/^#define LIBKML_MICRO_VERSION.*$/{s/\([^0-9]*\)\([0-9]*\).*/\2/;P;}' \
-		    	$libkml_include_dir2/base/version.h)
+                        libkml_major=$(sed -n '/^#define LIBKML_MAJOR_VERSION.*$/{s/\([^0-9]*\)\([0-9]*\).*/\2/;P;}' \
+                            $libkml_include_dir2/base/version.h)
+                        libkml_minor=$(sed -n '/^#define LIBKML_MINOR_VERSION.*$/{s/\([^0-9]*\)\([0-9]*\).*/\2/;P;}' \
+                            $libkml_include_dir2/base/version.h)
+                        libkml_revision=$(sed -n '/^#define LIBKML_MICRO_VERSION.*$/{s/\([^0-9]*\)\([0-9]*\).*/\2/;P;}' \
+                            $libkml_include_dir2/base/version.h)
 
-                    LIBKML_VERSION="$libkml_major.$libkml_minor.$libkml_revision"
+                        LIBKML_VERSION="$libkml_major.$libkml_minor.$libkml_revision"
 
 
-                                        libkml_version_req_major=`expr $libkml_version_req : '\([0-9]*\)'`
-                    libkml_version_req_minor=`expr $libkml_version_req : '[0-9]*\.\([0-9]*\)'`
-                    libkml_version_req_revision=`expr $libkml_version_req : '[0-9]*\.[0-9]*\.\([0-9]*\)'`
-                    if test "x$libkml_version_req_revision" = "x"; then
-                        libkml_version_req_revision="0"
-                    fi
+                                                libkml_version_req_major=`expr $libkml_version_req : '\([0-9]*\)'`
+                        libkml_version_req_minor=`expr $libkml_version_req : '[0-9]*\.\([0-9]*\)'`
+                        libkml_version_req_revision=`expr $libkml_version_req : '[0-9]*\.[0-9]*\.\([0-9]*\)'`
+                        if test "x$libkml_version_req_revision" = "x"; then
+                            libkml_version_req_revision="0"
+                        fi
 
-                    libkml_version_req_number=`expr $libkml_version_req_major \* 10000 \
-                                               \+ $libkml_version_req_minor \* 100 \
-                                               \+ $libkml_version_req_revision`
+                        libkml_version_req_number=`expr $libkml_version_req_major \* 10000 \
+                                                   \+ $libkml_version_req_minor \* 100 \
+                                                   \+ $libkml_version_req_revision`
 
-                                        libkml_version_number=`expr $libkml_major \* 10000 \
-                                          \+ $libkml_minor \* 100 \
-                                           \+ $libkml_revision`
+                                                libkml_version_number=`expr $libkml_major \* 10000 \
+                                              \+ $libkml_minor \* 100 \
+                                               \+ $libkml_revision`
 
-                    libkml_version_check=`expr $libkml_version_number \>\= $libkml_version_req_number`
-                    if test "$libkml_version_check" = "1"; then
-                        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+                        libkml_version_check=`expr $libkml_version_number \>\= $libkml_version_req_number`
+                        if test "$libkml_version_check" = "1"; then
+                            { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
+                        else
+                            { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+                            { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Found Google libkml ${LIBKML_VERSION}, which is older than required (${libkml_version_req}). KML support disabled." >&5
+$as_echo "$as_me: WARNING: Found Google libkml ${LIBKML_VERSION}, which is older than required (${libkml_version_req}). KML support disabled." >&2;}
+                            HAVE_LIBKML="no"
+                        fi
                     else
                         { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
-                        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Found Google libkml ${LIBKML_VERSION}, which is older than required (${libkml_version_req}). KML support disabled." >&5
-$as_echo "$as_me: WARNING: Found Google libkml ${LIBKML_VERSION}, which is older than required (${libkml_version_req}). KML support disabled." >&2;}
-			HAVE_LIBKML="no"
-                    fi
-                else
-                    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-                    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Missing header $libkml_include_dir2/base/bersion.hpp. Unable to determine Google libkml version." >&5
+                        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Missing header $libkml_include_dir2/base/bersion.hpp. Unable to determine Google libkml version." >&5
 $as_echo "$as_me: WARNING: Missing header $libkml_include_dir2/base/bersion.hpp. Unable to determine Google libkml version." >&2;}
+                    fi
                 fi
             fi
-        fi
 
-    else
-        HAVE_LIBKML="no"
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: $HAVE_LIBKML" >&5
+        else
+            HAVE_LIBKML="no"
+            { $as_echo "$as_me:${as_lineno-$LINENO}: result: $HAVE_LIBKML" >&5
 $as_echo "$HAVE_LIBKML" >&6; }
 
-        if test "$libkml_requested" = "yes"; then
-            { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Google libkml support requested but headers or library not found. Specify valid prefix of libkml using --with-libkml=[DIR] or provide include directory and linker flags using --with-libkml-inc and --with-libkml-lib" >&5
+            if test "$libkml_requested" = "yes"; then
+                { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Google libkml support requested but headers or library not found. Specify valid prefix of libkml using --with-libkml=[DIR] or provide include directory and linker flags using --with-libkml-inc and --with-libkml-lib" >&5
 $as_echo "$as_me: WARNING: Google libkml support requested but headers or library not found. Specify valid prefix of libkml using --with-libkml=[DIR] or provide include directory and linker flags using --with-libkml-inc and --with-libkml-lib" >&2;}
+            fi
         fi
     fi
 
@@ -28354,6 +28597,32 @@ PAM_SETTING=$PAM_SETTING
 
 
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to build PDF driver as a plugin" >&5
+$as_echo_n "checking whether to build PDF driver as a plugin... " >&6; }
+
+# Check whether --enable-pdf_plugin was given.
+if test "${enable_pdf_plugin+set}" = set; then :
+  enableval=$enable_pdf_plugin;
+fi
+
+
+PDF_PLUGIN=no
+if test "x$enable_pdf_plugin" = "xyes" ; then
+
+  PDF_PLUGIN=yes
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+PDF_PLUGIN=$PDF_PLUGIN
+
+
+
+
 
 # Check whether --with-poppler was given.
 if test "${with_poppler+set}" = set; then :
@@ -28397,10 +28666,13 @@ if test "$with_poppler" != "no" -a "$with_poppler" != ""; then
     fi
 
     if test "$HAVE_POPPLER" = "yes"; then
-        LIBS="${TEST_POPPLER_LIB} ${LIBS}"
+        if test "$PDF_PLUGIN" = "no"; then
+            LIBS="${TEST_POPPLER_LIB} ${LIBS}"
+        fi
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
         POPPLER_INC=$TEST_POPPLER_INC
+        POPPLER_PLUGIN_LIB="${TEST_POPPLER_LIB}"
 
         # And now try another dirty thing, but this one is
         # optional.
@@ -28501,6 +28773,8 @@ POPPLER_0_23_OR_LATER=$POPPLER_0_23_OR_LATER
 
 POPPLER_INC=$POPPLER_INC
 
+POPPLER_PLUGIN_LIB=$POPPLER_PLUGIN_LIB
+
 
 
 
@@ -28540,8 +28814,11 @@ fi
         RETVAL=$?
         if test $RETVAL -eq 0; then
             HAVE_PODOFO=yes
-            LIBS="${PODOFO_LIB} ${LIBS}"
+            if test "$PDF_PLUGIN" = "no"; then
+                LIBS="${PODOFO_LIB} ${LIBS}"
+            fi
             PODOFO_INC=$TEST_PODOFO_INC
+            PODOFO_PLUGIN_LIB="${PODOFO_LIB}"
             { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
         fi
@@ -28577,8 +28854,11 @@ fi
         RETVAL=$?
         if test $RETVAL -eq 0; then
             HAVE_PODOFO=yes
-            LIBS="${PODOFO_LIB} ${LIBS}"
+            if test "$PDF_PLUGIN" = "no"; then
+                LIBS="${PODOFO_LIB} ${LIBS}"
+            fi
             PODOFO_INC=$TEST_PODOFO_INC
+            PODOFO_PLUGIN_LIB="${PODOFO_LIB}"
             { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
         else
@@ -28596,6 +28876,131 @@ fi
 HAVE_PODOFO=$HAVE_PODOFO
 
 PODOFO_INC=$PODOFO_INC
+
+PODOFO_PLUGIN_LIB=$PODOFO_PLUGIN_LIB
+
+
+
+
+# Check whether --with-pdfium was given.
+if test "${with_pdfium+set}" = set; then :
+  withval=$with_pdfium;
+fi
+
+
+HAVE_PDFIUM=no
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for pdfium" >&5
+$as_echo_n "checking for pdfium... " >&6; }
+
+if test "$with_pdfium" != "no" -a "$with_pdfium" != ""; then
+
+
+# Check whether --with-pdfium-lib was given.
+if test "${with_pdfium_lib+set}" = set; then :
+  withval=$with_pdfium_lib;
+fi
+
+
+    if test "$with_pdfium" = "yes" ; then
+        TEST_PDFIUM_INC="-I/usr/include -I/usr/include/pdfium"
+        PDFIUM_LIB="-lpdfium"
+        PDFIUM_LIBDIR="/usr"
+    else
+        TEST_PDFIUM_INC="-I$with_pdfium -I$with_pdfium/include -I$with_pdfium/include/pdfium"
+        PDFIUM_LIB="-L$with_pdfium -L$with_pdfium/lib -lpdfium"
+        PDFIUM_LIBDIR="$with_pdfium"
+    fi
+
+    if test ! -z "`uname | grep Darwin`" ; then
+        PDFIUM_LIB="-stdlib=libstdc++ $PDFIUM_LIB"
+    fi
+
+    if test "x$with_pdfium_lib" = "x" ; then
+        rm -f testpdfium.*
+        echo '#include <fpdfview.h>' > testpdfium.cpp
+        echo '#include <core/include/fpdfapi/fpdf_page.h>' >> testpdfium.cpp
+        echo 'int main(int argc, char** argv) { FPDF_InitLibrary(); FPDF_DestroyLibrary(); return 0; } ' >> testpdfium.cpp
+        TEST_CXX_FLAGS="-std=c++0x"
+        if test ! -z "`uname | grep Darwin`" ; then
+          TEST_CXX_FLAGS="$TEST_CXX_FLAGS -stdlib=libstdc++"
+        fi
+        if test -z "`${CXX} $TEST_CXX_FLAGS testpdfium.cpp -o testpdfium ${TEST_PDFIUM_INC} ${PDFIUM_LIB}  2>&1`" ; then
+            HAVE_PDFIUM=yes
+            CXXFLAGS="$TEST_CXX_FLAGS $CXXFLAGS"
+            if test "$PDF_PLUGIN" = "no"; then
+                LIBS="${PDFIUM_LIB} ${LIBS}"
+            fi
+            PDFIUM_PLUGIN_LIB="${PDFIUM_LIB}"
+            PDFIUM_INC=$TEST_PDFIUM_INC
+            { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+        fi
+        rm -f testpdfium.*
+        rm -f testpdfium
+    fi
+
+    if test "$HAVE_PDFIUM" = "no"; then
+        if test "x$with_pdfium_lib" != "x" ; then
+            PDFIUM_LIB="$with_pdfium_lib"
+        else
+            # This may be a static libpdfium.a, so add dependant libraries
+            PDFIUM_LIB="-L$PDFIUM_LIBDIR -L$PDFIUM_LIBDIR/lib/pdfium -lpdfium -lfpdfdoc -lfpdfapi -lfpdftext -lformfiller -lpdfwindow"
+            PDFIUM_LIB="$PDFIUM_LIB -lfxedit -lfpdfdoc -lfxcodec -lfx_libopenjpeg -lfx_lcms2 -lfx_libjpeg -lfx_zlib"
+            PDFIUM_LIB="$PDFIUM_LIB -lfdrm -lfxge -lfreetype -lfx_agg -lfxcrt -lbigint"
+            if test ! -z "`uname | grep Darwin`" ; then
+                PDFIUM_LIB="-framework AppKit -framework CoreFoundation $PDFIUM_LIB"
+            fi
+        fi
+
+
+# Check whether --with-pdfium-extra-lib-for-test was given.
+if test "${with_pdfium_extra_lib_for_test+set}" = set; then :
+  withval=$with_pdfium_extra_lib_for_test;
+fi
+
+
+        if test "x$with_pdfium_extra_lib_for_test" = "x" ; then
+            TEST_PDFIUM_LIB="$PDFIUM_LIB"
+        else
+            TEST_PDFIUM_LIB="$PDFIUM_LIB $with_pdfium_extra_lib_for_test"
+        fi
+
+        rm -f testpdfium.*
+        echo '#include <fpdfview.h>' > testpdfium.cpp
+        echo '#include <core/include/fpdfapi/fpdf_page.h>' >> testpdfium.cpp
+        echo 'int main(int argc, char** argv) { FPDF_InitLibrary(); FPDF_DestroyLibrary(); return 0; } ' >> testpdfium.cpp
+        TEST_CXX_FLAGS="-std=c++0x"
+        if test ! -z "`uname | grep Darwin`" ; then
+          TEST_CXX_FLAGS="$TEST_CXX_FLAGS -stdlib=libstdc++"
+        fi
+        if test -z "`${CXX} $TEST_CXX_FLAGS testpdfium.cpp -o testpdfium ${TEST_PDFIUM_INC} ${TEST_PDFIUM_LIB} 2>&1`" ; then
+            HAVE_PDFIUM=yes
+            CXXFLAGS="$TEST_CXX_FLAGS $CXXFLAGS"
+            if test "$PDF_PLUGIN" = "no"; then
+                LIBS="${PDFIUM_LIB} ${LIBS}"
+            fi
+            PDFIUM_PLUGIN_LIB="${PDFIUM_LIB}"
+            PDFIUM_INC=$TEST_PDFIUM_INC
+            { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+        else
+            { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+        fi
+        rm -f testpdfium.*
+        rm -f testpdfium
+    fi
+else
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: disabled" >&5
+$as_echo "disabled" >&6; }
+fi
+
+HAVE_PDFIUM=$HAVE_PDFIUM
+
+PDFIUM_INC=$PDFIUM_INC
+
+PDFIUM_PLUGIN_LIB=$PDFIUM_PLUGIN_LIB
 
 
 
@@ -29835,6 +30240,121 @@ fi
 
 HAVE_ARMADILLO=$HAVE_ARMADILLO
 
+
+
+
+# Check whether --with-cryptopp was given.
+if test "${with_cryptopp+set}" = set; then :
+  withval=$with_cryptopp;
+fi
+
+
+HAVE_CRYPTOPP=no
+USE_ONLY_CRYPTODLL_ALG=yes
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for cryptopp" >&5
+$as_echo_n "checking for cryptopp... " >&6; }
+
+if test "$with_cryptopp" = "no" ; then
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: disabled" >&5
+$as_echo "disabled" >&6; }
+
+elif test "$with_cryptopp" = "yes" -o "$with_cryptopp" = "" ; then
+
+    rm -f testcryptopp.*
+    echo '#include <cryptopp/aes.h>' > testcryptopp.cpp
+    # Catch issue with clang++ (https://groups.google.com/forum/#!topic/cryptopp-users/DfWHy3bT0KI)
+    echo '#include <cryptopp/osrng.h>' >> testcryptopp.cpp
+    echo 'int main(int argc, char** argv) { CryptoPP::AES::Encryption oEnc; return 0; } ' >> testcryptopp.cpp
+    ${CXX} ${CXXFLAGS} testcryptopp.cpp -o testcryptopp -lcryptopp 2>/dev/null
+    RETVAL=$?
+    if test $RETVAL -eq 0; then
+        HAVE_CRYPTOPP=yes
+        LIBS="-lcryptopp ${LIBS}"
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+    else
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+        if test "$with_cryptopp" = "yes"; then
+            as_fn_error $? "--with-cryptopp was requested, but not available" "$LINENO" 5
+        fi
+    fi
+    rm -f testcryptopp.*
+    rm -f testcryptopp
+
+    if test "$HAVE_CRYPTOPP" = "yes"; then
+
+        { $as_echo "$as_me:${as_lineno-$LINENO}: checking if cryptopp has all cipher methods builtin" >&5
+$as_echo_n "checking if cryptopp has all cipher methods builtin... " >&6; }
+        rm -f testcryptopp.*
+        echo '#include <cryptopp/blowfish.h>' > testcryptopp.cpp
+        echo 'int main(int argc, char** argv) { CryptoPP::Blowfish::Encryption oEnc; return 0; } ' >> testcryptopp.cpp
+        ${CXX} ${CXXFLAGS} testcryptopp.cpp -o testcryptopp -lcryptopp 2>/dev/null
+        RETVAL=$?
+        if test $RETVAL -eq 0; then
+            USE_ONLY_CRYPTODLL_ALG=no
+            { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+        else
+            USE_ONLY_CRYPTODLL_ALG=yes
+            { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+        fi
+        rm -f testcryptopp.*
+        rm -f testcryptopp
+    fi
+
+else
+
+    rm -f testcryptopp.*
+    echo '#include <cryptopp/aes.h>' > testcryptopp.cpp
+    # Catch issue with clang++ (https://groups.google.com/forum/#!topic/cryptopp-users/DfWHy3bT0KI)
+    echo '#include <cryptopp/osrng.h>' >> testcryptopp.cpp
+    echo 'int main(int argc, char** argv) { CryptoPP::AES::Encryption oEnc; return 0; } ' >> testcryptopp.cpp
+    ${CXX} ${CXXFLAGS} testcryptopp.cpp -I$with_cryptopp/include -o testcryptopp -L$with_cryptopp/lib -lcryptopp 2>/dev/null
+    RETVAL=$?
+    if test $RETVAL -eq 0; then
+        HAVE_CRYPTOPP=yes
+        LIBS="-L$with_cryptopp/lib -lcryptopp ${LIBS}"
+        EXTRA_INCLUDES="-I$with_cryptopp/include $EXTRA_INCLUDES"
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+    else
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+    fi
+    rm -f testcryptopp.*
+    rm -f testcryptopp
+
+    if test "$HAVE_CRYPTOPP" = "yes"; then
+
+        { $as_echo "$as_me:${as_lineno-$LINENO}: checking if cryptopp has all cipher methods builtin" >&5
+$as_echo_n "checking if cryptopp has all cipher methods builtin... " >&6; }
+        rm -f testcryptopp.*
+        echo '#include <cryptopp/blowfish.h>' > testcryptopp.cpp
+        echo 'int main(int argc, char** argv) { CryptoPP::Blowfish::Encryption oEnc; return 0; } ' >> testcryptopp.cpp
+        ${CXX} ${CXXFLAGS} testcryptopp.cpp -I$with_cryptopp/include -o testcryptopp -L$with_cryptopp/lib -lcryptopp 2>/dev/null
+        RETVAL=$?
+        if test $RETVAL -eq 0; then
+            USE_ONLY_CRYPTODLL_ALG=no
+            { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+        else
+            USE_ONLY_CRYPTODLL_ALG=yes
+            { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+        fi
+        rm -f testcryptopp.*
+        rm -f testcryptopp
+    fi
+
+fi
+
+HAVE_CRYPTOPP=$HAVE_CRYPTOPP
+
+USE_ONLY_CRYPTODLL_ALG=$USE_ONLY_CRYPTODLL_ALG
 
 
 ac_config_files="$ac_config_files GDALmake.opt"
@@ -32265,6 +32785,9 @@ echo "  LIBZ support:              ${LIBZ_SETTING}"
 echo "  LIBLZMA support:           ${LIBLZMA_SETTING}"
 
 
+echo "  cryptopp support:          ${HAVE_CRYPTOPP}"
+
+
 echo "  GRASS support:             ${GRASS_SETTING}"
 
 
@@ -32436,6 +32959,9 @@ echo "  Poppler support:           ${HAVE_POPPLER}"
 echo "  Podofo support:            ${HAVE_PODOFO}"
 
 
+echo "  PDFium support:            ${HAVE_PDFIUM}"
+
+
 echo "  OpenCL support:            ${OPENCL_SETTING}"
 
 
@@ -32494,10 +33020,20 @@ echo "  hide internal symbols:     ${HAVE_HIDE_INTERNAL_SYMBOLS}"
 echo ""
 
 
-if test "$HAVE_PODOFO" = "yes" -a "$HAVE_POPPLER" = "yes" ; then
+if test "$HAVE_PODOFO" = "yes" -a "$HAVE_POPPLER" = "yes"  -a "$HAVE_PDFIUM" = "yes"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: --with-podofo, --with-poppler and --with-pdfium available. This is unusual setup, but will work. Pdfium will be used by default..." >&5
+$as_echo "$as_me: WARNING: --with-podofo, --with-poppler and --with-pdfium available. This is unusual setup, but will work. Pdfium will be used by default..." >&2;}
+elif test "$HAVE_PODOFO" = "yes" -a "$HAVE_POPPLER" = "yes" ; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: --with-podofo and --with-poppler are both available. This is unusual setup, but will work. Poppler will be used by default..." >&5
 $as_echo "$as_me: WARNING: --with-podofo and --with-poppler are both available. This is unusual setup, but will work. Poppler will be used by default..." >&2;}
+elif test "$HAVE_POPPLER" = "yes" -a "$HAVE_PDFIUM" = "yes" ; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: --with-poppler and --with-pdfium are both available. This is unusual setup, but will work. Pdfium will be used by default..." >&5
+$as_echo "$as_me: WARNING: --with-poppler and --with-pdfium are both available. This is unusual setup, but will work. Pdfium will be used by default..." >&2;}
+elif test "$HAVE_PODOFO" = "yes" -a "$HAVE_PDFIUM" = "yes" ; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: --with-podofo and --with-pdfium are both available. This is unusual setup, but will work. Pdfium will be used by default..." >&5
+$as_echo "$as_me: WARNING: --with-podofo and --with-pdfium are both available. This is unusual setup, but will work. Pdfium will be used by default..." >&2;}
 fi
+
 if test "$HAVE_LIBXML2" = "yes" -a "$FGDB_ENABLED" = "yes"; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: --with-libxml2 and --with-fgdb are both available. There might be some incompatibility between system libxml2 and the embedded copy within libFileGDBAPI" >&5
 $as_echo "$as_me: WARNING: --with-libxml2 and --with-fgdb are both available. There might be some incompatibility between system libxml2 and the embedded copy within libFileGDBAPI" >&2;}

@@ -1,3 +1,4 @@
+# -*- Makefile -*- for emacs.
 GDAL_ROOT	=	@abs_top_builddir@
 top_builddir	=	$(GDAL_ROOT)
 
@@ -70,6 +71,14 @@ INST_HTML	=	$(HOME)/www/gdal
 CPPFLAGS	= @CPPFLAGS@ -I$(GDAL_ROOT)/port @EXTRA_INCLUDES@ -DGDAL_COMPILATION
 CFLAGS		= @CFLAGS@ @C_WFLAGS@ $(USER_DEFS)
 CXXFLAGS	= @CXXFLAGS@ @CXX_WFLAGS@ $(USER_DEFS)
+
+# TODO(schwehr): Make these be configure flags.
+# CFLAGS += -std=c11
+
+# CXXFLAGS += -Wextra
+# CXXFLAGS += -Werror
+# CXXFLAGS += -std=c++11
+
 LDFLAGS     = @LDFLAGS@
 
 RANLIB		=	@RANLIB@
@@ -436,6 +445,11 @@ RASDAMAN_INC  =   @RASDAMAN_INC@
 RASDAMAN_LIB  =   @RASDAMAN_LIB@
 
 #
+# PDF stuff
+#
+PDF_PLUGIN = @PDF_PLUGIN@
+
+#
 # Poppler stuff
 #
 
@@ -445,6 +459,7 @@ POPPLER_BASE_STREAM_HAS_TWO_ARGS = @POPPLER_BASE_STREAM_HAS_TWO_ARGS@
 POPPLER_0_20_OR_LATER = @POPPLER_0_20_OR_LATER@
 POPPLER_0_23_OR_LATER = @POPPLER_0_23_OR_LATER@
 POPPLER_INC = @POPPLER_INC@
+POPPLER_PLUGIN_LIB = @POPPLER_PLUGIN_LIB@
 
 #
 # Podofo stuff
@@ -452,6 +467,15 @@ POPPLER_INC = @POPPLER_INC@
 
 HAVE_PODOFO = @HAVE_PODOFO@
 PODOFO_INC = @PODOFO_INC@
+PODOFO_PLUGIN_LIB = @PODOFO_PLUGIN_LIB@
+
+#
+# Pdfium stuff
+#
+
+HAVE_PDFIUM = @HAVE_PDFIUM@
+PDFIUM_INC = @PDFIUM_INC@
+PDFIUM_PLUGIN_LIB = @PDFIUM_PLUGIN_LIB@
 
 #
 # CharLs stuff
@@ -502,6 +526,12 @@ HAVE_FREEXL = @HAVE_FREEXL@
 FREEXL_INCLUDE = @FREEXL_INCLUDE@
 
 #
+# cryptopp stuff
+#
+HAVE_CRYPTOPP    =       @HAVE_CRYPTOPP@
+USE_ONLY_CRYPTODLL_ALG        =       @USE_ONLY_CRYPTODLL_ALG@
+
+#
 #	Note these codes have to exactly match the format directory names, 
 #	and their uppercase form should be the format portion of the
 #	format registration entry point.  eg. gdb -> GDALRegister_GDB().
@@ -517,7 +547,12 @@ GDAL_FORMATS = 	gxf gtiff hfa aigrid aaigrid ceos ceos2 iso8211 xpm \
 
 
 ifneq ($(LIBZ_SETTING),no)
-GDAL_FORMATS := $(GDAL_FORMATS) rik ozi pdf
+GDAL_FORMATS := $(GDAL_FORMATS) rik ozi
+
+ifneq ($(PDF_PLUGIN),yes)
+GDAL_FORMATS := $(GDAL_FORMATS) pdf
+endif
+
 endif
 
 ifeq ($(OGR_ENABLED),yes)

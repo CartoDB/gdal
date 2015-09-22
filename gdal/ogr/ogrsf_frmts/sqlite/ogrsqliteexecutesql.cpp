@@ -467,6 +467,7 @@ static void OGR2SQLITEGetPotentialLayerNames(const char *pszSQLCommand,
 /*               OGR2SQLITE_IgnoreAllFieldsExceptGeometry()             */
 /************************************************************************/
 
+#ifdef HAVE_SPATIALITE
 static
 void OGR2SQLITE_IgnoreAllFieldsExceptGeometry(OGRLayer* poLayer)
 {
@@ -481,11 +482,18 @@ void OGR2SQLITE_IgnoreAllFieldsExceptGeometry(OGRLayer* poLayer)
     poLayer->SetIgnoredFields((const char**)papszIgnored);
     CSLDestroy(papszIgnored);
 }
+#endif
 
 
 /************************************************************************/
 /*                  OGR2SQLITEDealWithSpatialColumn()                   */
 /************************************************************************/
+#if HAVE_SPATIALITE
+#  define WHEN_SPATIALITE(arg) arg
+#else
+#  define WHEN_SPATIALITE(arg)
+#endif
+
 static
 int OGR2SQLITEDealWithSpatialColumn(OGRLayer* poLayer,
                                     int iGeomCol,
@@ -494,12 +502,12 @@ int OGR2SQLITEDealWithSpatialColumn(OGRLayer* poLayer,
                                     OGRSQLiteDataSource* poSQLiteDS,
                                     sqlite3* hDB,
                                     int bSpatialiteDB,
-                                    const std::set<LayerDesc>& oSetLayers,
-                                    const std::set<CPLString>& oSetSpatialIndex
+                                    const std::set<LayerDesc>&
+                                        WHEN_SPATIALITE(oSetLayers),
+                                    const std::set<CPLString>&
+                                        WHEN_SPATIALITE(oSetSpatialIndex)
                                    )
 {
-    int rc;
-
     OGRGeomFieldDefn* poGeomField =
         poLayer->GetLayerDefn()->GetGeomFieldDefn(iGeomCol);
     CPLString osGeomColRaw;
@@ -528,7 +536,9 @@ int OGR2SQLITEDealWithSpatialColumn(OGRLayer* poLayer,
         nSRSId = poSQLiteDS->FetchSRSId(poSRS);
 
     CPLString osSQL;
-    int bCreateSpatialIndex = FALSE;
+#ifdef HAVE_SPATIALITE
+    bool bCreateSpatialIndex = false;
+#endif
     if( !bSpatialiteDB )
     {
         osSQL.Printf("INSERT INTO geometry_columns (f_table_name, "
@@ -556,7 +566,7 @@ int OGR2SQLITEDealWithSpatialColumn(OGRLayer* poLayer,
             const LayerDesc& oLayerDescIter = *oIter2;
             if( EQUAL(oLayerDescIter.osLayerName, osIdxNameRaw) )
             {
-                    bCreateSpatialIndex = TRUE;
+                    bCreateSpatialIndex = true;
                     break;
             }
         }
@@ -570,7 +580,7 @@ int OGR2SQLITEDealWithSpatialColumn(OGRLayer* poLayer,
                 const CPLString& osNameIter = *oIter3;
                 if( EQUAL(osNameIter, oLayerDesc.osLayerName) )
                 {
-                    bCreateSpatialIndex = TRUE;
+                    bCreateSpatialIndex = true;
                     break;
                 }
             }
@@ -612,7 +622,7 @@ int OGR2SQLITEDealWithSpatialColumn(OGRLayer* poLayer,
         }
     }
 #endif // HAVE_SPATIALITE
-    rc = sqlite3_exec( hDB, osSQL.c_str(), NULL, NULL, NULL );
+    int rc = sqlite3_exec( hDB, osSQL.c_str(), NULL, NULL, NULL );
 
 #ifdef HAVE_SPATIALITE
 /* -------------------------------------------------------------------- */

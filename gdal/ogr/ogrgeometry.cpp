@@ -396,7 +396,7 @@ OGRBoolean OGRGeometry::Intersects( const OGRGeometry *poOtherGeom ) const
 {
     OGREnvelope         oEnv1, oEnv2;
 
-    if( this == NULL || poOtherGeom == NULL )
+    if( poOtherGeom == NULL )
         return TRUE;
 
     this->getEnvelope( &oEnv1 );
@@ -873,11 +873,6 @@ int OGR_G_Equals( OGRGeometryH hGeom, OGRGeometryH hOther )
 {
     VALIDATE_POINTER1( hGeom, "OGR_G_Equals", FALSE );
 
-    if (hGeom == NULL) {
-        CPLError ( CE_Failure, CPLE_ObjectNull, "hGeom was NULL in OGR_G_Equals");
-        return 0;
-    }
-
     if (hOther == NULL) {
         CPLError ( CE_Failure, CPLE_ObjectNull, "hOther was NULL in OGR_G_Equals");
         return 0;
@@ -1218,7 +1213,8 @@ OGRErr OGR_G_ImportFromWkt( OGRGeometryH hGeom, char ** ppszSrcText )
 
 /* Returns -1 if processing must continue */
 OGRErr OGRGeometry::importPreambuleFromWkt( char ** ppszInput,
-                                            int* pbHasZ, int* pbHasM )
+                                            int* pbHasZ, int* pbHasM,
+                                            bool* pbIsEmpty )
 {
     char        szToken[OGR_WKT_TOKEN_MAX];
     const char  *pszInput = *ppszInput;
@@ -1227,6 +1223,7 @@ OGRErr OGRGeometry::importPreambuleFromWkt( char ** ppszInput,
 /*      Clear existing Geoms.                                           */
 /* -------------------------------------------------------------------- */
     empty();
+    *pbIsEmpty = false;
 
 /* -------------------------------------------------------------------- */
 /*      Read and verify the type keyword, and ensure it matches the     */
@@ -1247,6 +1244,7 @@ OGRErr OGRGeometry::importPreambuleFromWkt( char ** ppszInput,
     if( EQUAL(szToken,"EMPTY") )
     {
         *ppszInput = (char *) pszPreScan;
+        *pbIsEmpty = true;
         empty();
         return OGRERR_NONE;
     }
@@ -1280,6 +1278,7 @@ OGRErr OGRGeometry::importPreambuleFromWkt( char ** ppszInput,
             empty();
             if( bHasZ )
                 setCoordinateDimension(3);
+            *pbIsEmpty = true;
 
             /* FIXME?: In theory we should store the M presence */
             /* if we want to allow round-trip with ExportToWKT v1.2 */
@@ -1308,6 +1307,7 @@ OGRErr OGRGeometry::importPreambuleFromWkt( char ** ppszInput,
             {
                 *ppszInput = (char *) pszPreScan;
                 empty();
+                *pbIsEmpty = true;
                 return OGRERR_NONE;
             }
         }
@@ -1315,7 +1315,7 @@ OGRErr OGRGeometry::importPreambuleFromWkt( char ** ppszInput,
     
     *ppszInput = (char*) pszInput;
 
-    return -1;
+    return OGRERR_NONE;
 }
 
 
@@ -1848,13 +1848,13 @@ int OGR_G_IsRing( OGRGeometryH hGeom )
 OGRwkbGeometryType OGRFromOGCGeomType( const char *pszGeomType )
 {
     OGRwkbGeometryType eType;
-    int bConvertTo3D = FALSE;
+    bool bConvertTo3D = false;
     if( *pszGeomType != '\0' )
     {
         char ch = pszGeomType[strlen(pszGeomType)-1];
         if( ch == 'z' || ch == 'Z' )
         {
-            bConvertTo3D = TRUE;
+            bConvertTo3D = true;
         }
     }
     if ( EQUALN_CST(pszGeomType, "POINT") )
@@ -1886,7 +1886,7 @@ OGRwkbGeometryType OGRFromOGCGeomType( const char *pszGeomType )
 
     if( bConvertTo3D )
         eType = wkbSetZ(eType);
-    
+
     return eType;
 }
 
@@ -4026,7 +4026,7 @@ void OGR_G_CloseRings( OGRGeometryH hGeom )
  * @since OGR 1.8.0 as a OGRGeometry method (previously was restricted to OGRPolygon)
  */
 
-int OGRGeometry::Centroid( OGRPoint *poPoint ) const
+OGRErr OGRGeometry::Centroid( OGRPoint *poPoint ) const
 
 {
     if( poPoint == NULL )
@@ -4231,6 +4231,31 @@ OGRGeometryH OGR_G_PointOnSurface( OGRGeometryH hGeom )
         return NULL;
     }
 #endif
+}
+
+/************************************************************************/
+/*                          PointOnSurfaceInternal()                    */
+/************************************************************************/
+
+OGRErr OGRGeometry::PointOnSurfaceInternal( OGRPoint * poPoint ) const
+{
+    if( poPoint == NULL || poPoint->IsEmpty() )
+        return OGRERR_FAILURE;
+
+    OGRGeometryH hInsidePoint = OGR_G_PointOnSurface( (OGRGeometryH) this );
+    if( hInsidePoint == NULL )
+        return OGRERR_FAILURE;
+
+    OGRPoint *poInsidePoint = (OGRPoint *) hInsidePoint;
+    if( poInsidePoint->IsEmpty() )
+        poPoint->empty();
+    else
+    {
+        poPoint->setX( poInsidePoint->getX() );
+        poPoint->setY( poInsidePoint->getY() );
+    }
+
+    return OGRERR_NONE;
 }
 
 /************************************************************************/
@@ -4548,7 +4573,7 @@ OGRGeometry *OGRGeometry::Polygonize() const
     GEOSGeom *hGeosGeomList = NULL;
     GEOSGeom hGeosPolygs = NULL;
     OGRGeometry *poPolygsOGRGeom = NULL;
-    int bError = FALSE;
+    bool bError = false;
 
     GEOSContextHandle_t hGEOSCtxt = createGEOSContext();
 
@@ -4559,17 +4584,17 @@ OGRGeometry *OGRGeometry::Polygonize() const
         OGRGeometry * poChild = (OGRGeometry*)poColl->getGeometryRef(ig);
         if( poChild == NULL ||
             wkbFlatten(poChild->getGeometryType()) != wkbLineString )
-            bError = TRUE;
+            bError = true;
         else
         {
             hGeosGeom = poChild->exportToGEOS(hGEOSCtxt);
             if( hGeosGeom == NULL)
-                bError = TRUE;
+                bError = true;
         }
         *(hGeosGeomList + ig) = hGeosGeom;
     }
 
-    if( bError == FALSE )
+    if( !bError )
     {
         hGeosPolygs = GEOSPolygonize_r( hGEOSCtxt, hGeosGeomList, iCount );
 
@@ -4957,9 +4982,10 @@ OGRErr OGRGeometry::importPreambuleFromWkb( unsigned char * pabyData,
 /* -------------------------------------------------------------------- */
 /*      Get the byte order byte.                                        */
 /* -------------------------------------------------------------------- */
-    eByteOrder = DB2_V72_FIX_BYTE_ORDER((OGRwkbByteOrder) *pabyData);
-    if (!( eByteOrder == wkbXDR || eByteOrder == wkbNDR ))
+    int nByteOrder = DB2_V72_FIX_BYTE_ORDER(*pabyData);
+    if (!( nByteOrder == wkbXDR || nByteOrder == wkbNDR ))
         return OGRERR_CORRUPT_DATA;
+    eByteOrder = (OGRwkbByteOrder) nByteOrder;
 
 /* -------------------------------------------------------------------- */
 /*      Get the geometry feature type.                                  */
@@ -4970,7 +4996,7 @@ OGRErr OGRGeometry::importPreambuleFromWkb( unsigned char * pabyData,
     if( err != OGRERR_NONE || eGeometryType != wkbFlatten(getGeometryType()) )
         return OGRERR_CORRUPT_DATA;
 
-    return -1;
+    return OGRERR_NONE;
 }
 
 /************************************************************************/
@@ -4992,7 +5018,7 @@ OGRErr OGRGeometry::importPreambuleOfCollectionFromWkb( unsigned char * pabyData
     OGRBoolean b3D = FALSE;
 
     OGRErr eErr = importPreambuleFromWkb( pabyData, nSize, eByteOrder, b3D, eWkbVariant );
-    if( eErr >= 0 )
+    if( eErr != OGRERR_NONE )
         return eErr;
 
 /* -------------------------------------------------------------------- */
@@ -5030,7 +5056,7 @@ OGRErr OGRGeometry::importPreambuleOfCollectionFromWkb( unsigned char * pabyData
     if( nSize != -1 )
         nSize -= nDataOffset;
 
-    return -1;
+    return OGRERR_NONE;
 }
 
 /************************************************************************/
@@ -5049,8 +5075,9 @@ OGRErr OGRGeometry::importCurveCollectionFromWkt( char ** ppszInput,
 
 {
     int bHasZ = FALSE, bHasM = FALSE;
-    OGRErr      eErr = importPreambuleFromWkt(ppszInput, &bHasZ, &bHasM);
-    if( eErr >= 0 )
+    bool bIsEmpty = false;
+    OGRErr      eErr = importPreambuleFromWkt(ppszInput, &bHasZ, &bHasM, &bIsEmpty);
+    if( eErr != OGRERR_NONE || bIsEmpty )
         return eErr;
 
     if( bHasZ )

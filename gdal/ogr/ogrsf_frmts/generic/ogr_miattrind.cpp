@@ -386,7 +386,7 @@ OGRErr OGRMILayerAttrIndex::IndexAllFeatures( int iField )
         
         delete poFeature;
 
-        if( eErr != CE_None )
+        if( eErr != OGRERR_NONE )
             return eErr;
     }
 
@@ -706,12 +706,15 @@ OGRMIAttrIndex::~OGRMIAttrIndex()
 OGRErr OGRMIAttrIndex::AddEntry( OGRField *psKey, GIntBig nFID )
 
 {
-    GByte *pabyKey = BuildKey( psKey );
-
     if( psKey == NULL )
         return OGRERR_FAILURE;
 
     if( nFID >= INT_MAX )
+        return OGRERR_FAILURE;
+
+    GByte *pabyKey = BuildKey( psKey );
+
+    if( pabyKey == NULL )
         return OGRERR_FAILURE;
 
     if( poINDFile->AddEntry( iIndex, pabyKey, (int)nFID+1 ) != 0 )
@@ -745,7 +748,7 @@ GByte *OGRMIAttrIndex::BuildKey( OGRField *psKey )
 
       case OFTInteger64:
       {
-        if( (GIntBig)(int)psKey->Integer64 != psKey->Integer64 )
+        if( !CPL_INT64_FITS_ON_INT32(psKey->Integer64) )
         {
             CPLError(CE_Warning, CPLE_NotSupported,
                      "64bit integer value passed to OGRMIAttrIndex::BuildKey()");

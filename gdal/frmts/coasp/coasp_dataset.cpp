@@ -72,6 +72,7 @@ class COASPMetadataReader
 	int nCurrentItem;
 public:
 	COASPMetadataReader(char *pszFname);
+        ~COASPMetadataReader();
 	COASPMetadataItem *GetNextItem();
 	COASPMetadataItem *GetItem(int nItem);
 	int GotoMetadataItem(int nItemNumber);
@@ -83,18 +84,21 @@ public:
 class COASPMetadataItem
 {
 protected:
-	char *pszItemName;
-	char *pszItemValue;
+    char *pszItemName;
+    char *pszItemValue;
+
 public:
-	COASPMetadataItem() { }
-	COASPMetadataItem(char *pszItemName, char *pszItemValue);
-	char *GetItemName();
-	char *GetItemValue();
-	int GetType() { return TYPE_GENERIC; }
+    COASPMetadataItem() : pszItemName(NULL), pszItemValue(NULL) { }
+    COASPMetadataItem(char *pszItemName, char *pszItemValue);
+    ~COASPMetadataItem();
+
+    char *GetItemName();
+    char *GetItemValue();
+    int GetType() { return TYPE_GENERIC; }
 };
 
 /* Same as MetadataItem class except parses GCP properly and returns
- * a GDAL_GCP struct 
+ * a GDAL_GCP struct
  */
 class COASPMetadataGeorefGridItem : public COASPMetadataItem
 {
@@ -103,8 +107,9 @@ class COASPMetadataGeorefGridItem : public COASPMetadataItem
 	int nLines;
 	double ndLat;
 	double ndLong;
+
 public:
-	COASPMetadataGeorefGridItem(int nId, int nPixels, int nLines, 
+	COASPMetadataGeorefGridItem(int nId, int nPixels, int nLines,
 		double ndLat, double ndLong);
 	const char *GetItemName() { return "georef_grid"; }
 	GDAL_GCP *GetItemValue();
@@ -117,10 +122,16 @@ public:
  * ================================================================ *
  ********************************************************************/
 
-COASPMetadataItem::COASPMetadataItem(char *pszItemName, char *pszItemValue) 
+COASPMetadataItem::COASPMetadataItem(char *pszItemName_, char *pszItemValue_)
 {
-	this->pszItemName = VSIStrdup(pszItemName);
-	this->pszItemValue = VSIStrdup(pszItemValue);
+    pszItemName = VSIStrdup(pszItemName_);
+    pszItemValue = VSIStrdup(pszItemValue_);
+}
+
+COASPMetadataItem::~COASPMetadataItem()
+{
+    CPLFree(pszItemName);
+    CPLFree(pszItemValue);
 }
 
 char *COASPMetadataItem::GetItemName() 
@@ -157,12 +168,18 @@ GDAL_GCP *COASPMetadataGeorefGridItem::GetItemValue()
  * ================================================================ *
  ********************************************************************/
 
-COASPMetadataReader::COASPMetadataReader(char *pszFname) 
+COASPMetadataReader::COASPMetadataReader(char *pszFname) :
+    fp(NULL), papszMetadata(NULL), nMetadataCount(0), nCurrentItem(0)
 {
-	this->fp = NULL;
-	this->nCurrentItem = 0;
-	this->papszMetadata = CSLLoad(pszFname);
-	this->nMetadataCount = CSLCount(this->papszMetadata);
+    papszMetadata = CSLLoad(pszFname);
+    nMetadataCount = CSLCount(papszMetadata);
+}
+
+COASPMetadataReader::~COASPMetadataReader()
+{
+    if (fp)
+        VSIFCloseL(fp);
+    CSLDestroy(papszMetadata);
 }
 
 COASPMetadataItem *COASPMetadataReader::GetNextItem() 
@@ -297,7 +314,7 @@ CPLErr COASPRasterBand::IReadBlock( CPL_UNUSED int nBlockXOff,
                                     void *pImage )
 {
 	if (this->fp == NULL) {
-		CPLError(CE_Fatal, 1, "file pointer freed unexpectedly\n");
+		CPLError(CE_Fatal, CPLE_AppDefined, "file pointer freed unexpectedly\n");
 		return CE_Fatal;
 	}
 
@@ -423,7 +440,7 @@ GDALDataset *COASPDataset::Open( GDALOpenInfo *poOpenInfo )
 	}
 
 	if (psChan == NULL) {
-		CPLError(CE_Fatal, 1, "unable to recognize file as COASP.\n");
+		CPLError(CE_Fatal, CPLE_AppDefined, "unable to recognize file as COASP.\n");
 		free(poDS->pszFileName);
 		free(pszBase);
 		free(pszDir);
@@ -444,6 +461,7 @@ GDALDataset *COASPDataset::Open( GDALOpenInfo *poOpenInfo )
     free(nValue);
 
     poReader->GotoMetadataItem("number_samples");
+    delete poItem;
     poItem = poReader->GetNextItem();
     nValue = poItem->GetItemValue();
     poDS->nRasterXSize = atoi(nValue);
@@ -505,7 +523,7 @@ GDALDataset *COASPDataset::Open( GDALOpenInfo *poOpenInfo )
 	if (poDS->fpBinHH == NULL && poDS->fpBinHV == NULL 
 		&& poDS->fpBinVH == NULL && poDS->fpBinVV == NULL) 
 	{
-		CPLError(CE_Fatal,1,"Unable to find any data! Aborting.");
+		CPLError(CE_Fatal,CPLE_AppDefined,"Unable to find any data! Aborting.");
 		free(pszBase);
 		free(pszDir);
 		delete poDS;

@@ -1501,15 +1501,16 @@ int NITFReadImageBlock( NITFImage *psImage, int nBlockX, int nBlockY,
             || VSIFReadL(pabyRawData, 1, nRawBytes, psImage->psFile->fp ) !=  
             nRawBytes )
         {
-            CPLError( CE_Failure, CPLE_FileIO, 
-                      "Unable to read %d byte block from " CPL_FRMT_GUIB ".", 
+            CPLError( CE_Failure, CPLE_FileIO,
+                      "Unable to read %d byte block from " CPL_FRMT_GUIB ".",
                       (int) nRawBytes, psImage->panBlockStart[iFullBlock] );
+            CPLFree( pabyRawData );
             return BLKREAD_FAIL;
         }
-        
-        success = NITFUncompressBILEVEL( psImage, pabyRawData, (int)nRawBytes, 
+
+        success = NITFUncompressBILEVEL( psImage, pabyRawData, (int)nRawBytes,
                                          pData );
-        
+
         CPLFree( pabyRawData );
 
         if( success )
@@ -1553,7 +1554,8 @@ int NITFWriteImageBlock( NITFImage *psImage, int nBlockX, int nBlockY,
         + psImage->nWordSize;
 
     if (nWrkBufSize == 0)
-      nWrkBufSize = (psImage->nBlockWidth*psImage->nBlockHeight*psImage->nBitsPerSample+7)/8;
+      nWrkBufSize = ((GUIntBig)psImage->nBlockWidth
+                     * psImage->nBlockHeight * psImage->nBitsPerSample+7)/8;
 
 /* -------------------------------------------------------------------- */
 /*      Can we do a direct read into our buffer?                        */
@@ -1982,10 +1984,10 @@ int NITFWriteIGEOLO( NITFImage *psImage, char chICORDS,
             return FALSE;
         }
 
-        CPLsprintf(szIGEOLO + 0, "%+#07.3f%+#08.3f", dfULY, dfULX);
-        CPLsprintf(szIGEOLO + 15, "%+#07.3f%+#08.3f", dfURY, dfURX);
-        CPLsprintf(szIGEOLO + 30, "%+#07.3f%+#08.3f", dfLRY, dfLRX);
-        CPLsprintf(szIGEOLO + 45, "%+#07.3f%+#08.3f", dfLLY, dfLLX);
+        CPLsnprintf(szIGEOLO + 0, sizeof(szIGEOLO), "%+#07.3f%+#08.3f", dfULY, dfULX);
+        CPLsnprintf(szIGEOLO + 15, sizeof(szIGEOLO) - 15, "%+#07.3f%+#08.3f", dfURY, dfURX);
+        CPLsnprintf(szIGEOLO + 30, sizeof(szIGEOLO) - 30, "%+#07.3f%+#08.3f", dfLRY, dfLRX);
+        CPLsnprintf(szIGEOLO + 45, sizeof(szIGEOLO) - 45, "%+#07.3f%+#08.3f", dfLLY, dfLLX);
     }
 
 /* -------------------------------------------------------------------- */
@@ -2001,13 +2003,13 @@ int NITFWriteIGEOLO( NITFImage *psImage, char chICORDS,
         CHECK_IGEOLO_UTM_Y("dfLRY", dfLRY);
         CHECK_IGEOLO_UTM_X("dfLLX", dfLLX);
         CHECK_IGEOLO_UTM_Y("dfLLY", dfLLY);
-        CPLsprintf( szIGEOLO + 0, "%02d%06d%07d",
+        CPLsnprintf( szIGEOLO + 0, sizeof(szIGEOLO), "%02d%06d%07d",
                  nZone, (int) floor(dfULX+0.5), (int) floor(dfULY+0.5) );
-        CPLsprintf( szIGEOLO + 15, "%02d%06d%07d",
+        CPLsnprintf( szIGEOLO + 15, sizeof(szIGEOLO) - 15, "%02d%06d%07d",
                  nZone, (int) floor(dfURX+0.5), (int) floor(dfURY+0.5) );
-        CPLsprintf( szIGEOLO + 30, "%02d%06d%07d",
+        CPLsnprintf( szIGEOLO + 30, sizeof(szIGEOLO) - 30, "%02d%06d%07d",
                  nZone, (int) floor(dfLRX+0.5), (int) floor(dfLRY+0.5) );
-        CPLsprintf( szIGEOLO + 45, "%02d%06d%07d",
+        CPLsnprintf( szIGEOLO + 45, sizeof(szIGEOLO) - 45, "%02d%06d%07d",
                  nZone, (int) floor(dfLLX+0.5), (int) floor(dfLLY+0.5) );
     }
 

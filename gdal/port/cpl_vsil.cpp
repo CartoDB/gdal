@@ -32,6 +32,8 @@
 #include "cpl_vsi_virtual.h"
 #include "cpl_multiproc.h"
 #include "cpl_string.h"
+
+#include <cassert>
 #include <string>
 
 CPL_CVSID("$Id$");
@@ -116,7 +118,7 @@ char **VSIReadDirRecursive( const char *pszPathIn )
     char* pszPath = CPLStrdup(pszPathIn);
     char* pszDisplayedPath = NULL;
 
-    while(TRUE)
+    while(true)
     {
         if( nCount < 0 )
         {
@@ -532,7 +534,8 @@ VSILFILE *VSIFOpenL( const char * pszFilename, const char * pszAccess )
  *
  * Analog of the POSIX fclose() function.
  *
- * @param fp file handle opened with VSIFOpenL().
+ * @param fp file handle opened with VSIFOpenL().  Passing a nullptr produces
+ * undefined behavior.
  *
  * @return 0 on success or -1 on failure.
  */
@@ -611,6 +614,16 @@ vsi_l_offset VSIFTellL( VSILFILE * fp )
 /************************************************************************/
 /*                             VSIRewindL()                             */
 /************************************************************************/
+
+/**
+ * \brief Rewind the file pointer to the beginning of the file.
+ *
+ * This is equivalent to VSIFSeekL( fp, 0, SEEK_SET )
+ *
+ * Analog of the POSIX rewind() call.
+ *
+ * @param fp file handle opened with VSIFOpenL(). 
+ */
 
 void VSIRewindL( VSILFILE * fp )
 
@@ -838,6 +851,24 @@ int VSIFPrintfL( VSILFILE *fp, const char *pszFormat, ... )
 /*                              VSIFPutcL()                              */
 /************************************************************************/
 
+// TODO: should we put in conformance with POSIX regarding the return
+// value. As of today (2015-08-29), no code in GDAL sources actually
+// check the return value.
+
+/**
+ * \brief Write a single byte to the file
+ *
+ * Writes the character nChar, cast to an unsigned char, to file.
+ *
+ * Almost an analog of the POSIX fputc() call, except that it returns
+ * the number of character written (1 or 0), and not the (cast) character itself or EOF.
+ *
+ * @param nChar character to write.
+ * @param fp file handle opened with VSIFOpenL(). 
+ * 
+ * @return 1 in case of success, 0 on error.
+ */
+
 int VSIFPutcL( int nChar, VSILFILE * fp )
 
 {
@@ -881,7 +912,7 @@ int VSIIngestFile( VSILFILE* fp,
                    GIntBig nMaxSize)
 {
     vsi_l_offset nDataLen = 0;
-    int bFreeFP = FALSE;
+    bool bFreeFP = false;
 
     if( fp == NULL && pszFilename == NULL )
         return FALSE;
@@ -901,7 +932,7 @@ int VSIIngestFile( VSILFILE* fp,
                       "Cannot open file '%s'", pszFilename );
             return FALSE;
         }
-        bFreeFP = TRUE;
+        bFreeFP = true;
     }
     else
         VSIFSeekL(fp, 0, SEEK_SET);
@@ -911,7 +942,7 @@ int VSIIngestFile( VSILFILE* fp,
     {
         vsi_l_offset nDataAlloc = 0;
         VSIFSeekL( fp, 0, SEEK_SET );
-        while(TRUE)
+        while(true)
         {
             if( nDataLen + 8192 + 1 > nDataAlloc )
             {
@@ -1092,20 +1123,22 @@ static CPLMutex* hVSIFileManagerMutex = NULL;
 VSIFileManager *VSIFileManager::Get()
 
 {
-    static volatile int nConstructerPID = 0;
+    static volatile GPtrDiff_t nConstructerPID = 0;
     if( poManager != NULL )
     {
         if( nConstructerPID != 0 )
         {
-            int nCurrentPID = (int)CPLGetPID();
+            GPtrDiff_t nCurrentPID = (GPtrDiff_t)CPLGetPID();
             if( nConstructerPID != nCurrentPID )
             {
-                //printf("Thread %d: Waiting for VSIFileManager to be finished by other thread.\n", nCurrentPID);
                 {
                     CPLMutexHolder oHolder( &hVSIFileManagerMutex );
                 }
-                //printf("Thread %d: End of wait for VSIFileManager construction to be finished\n", nCurrentPID);
-                CPLAssert(nConstructerPID == 0);
+                if ( nConstructerPID != 0 )
+                {
+                    VSIDebug1( "nConstructerPID != 0: %d", nConstructerPID);
+                    assert(false);
+                }
             }
         }
         return poManager;
@@ -1114,7 +1147,7 @@ VSIFileManager *VSIFileManager::Get()
     CPLMutexHolder oHolder2( &hVSIFileManagerMutex );
     if( poManager == NULL )
     {
-        nConstructerPID = (int)CPLGetPID();
+        nConstructerPID = (GPtrDiff_t)CPLGetPID();
         //printf("Thread %d: VSIFileManager in construction\n", nConstructerPID);
         poManager = new VSIFileManager;
         VSIInstallLargeFileHandler();
@@ -1132,6 +1165,8 @@ VSIFileManager *VSIFileManager::Get()
         VSIInstallStdoutHandler();
         VSIInstallSparseFileHandler();
         VSIInstallTarFileHandler();
+        VSIInstallCryptFileHandler();
+
         //printf("Thread %d: VSIFileManager construction finished\n", nConstructerPID);
         nConstructerPID = 0;
     }

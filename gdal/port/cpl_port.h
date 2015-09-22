@@ -263,6 +263,12 @@ typedef int              GPtrDiff_t;
 #define GUINTBIG_TO_DOUBLE(x) (double)(x)
 #endif
 
+#ifdef COMPAT_WITH_ICC_CONVERSION_CHECK
+#define CPL_INT64_FITS_ON_INT32(x) ((x) >= INT_MIN && (x) <= INT_MAX)
+#else
+#define CPL_INT64_FITS_ON_INT32(x) (((GIntBig)(int)(x)) == (x))
+#endif
+
 /* ==================================================================== */
 /*      Other standard services.                                        */
 /* ==================================================================== */
@@ -541,11 +547,11 @@ char * strdup (char *instr);
 #endif
 
 /** Return a Int16 from the 2 bytes ordered in LSB order at address x */
-#define CPL_LSBINT16PTR(x)    ((*(GByte*)(x)) | ((*(GByte*)((x)+1)) << 8))
+#define CPL_LSBINT16PTR(x)    ((*(GByte*)(x)) | (*(((GByte*)(x))+1) << 8))
 
 /** Return a Int32 from the 4 bytes ordered in LSB order at address x */
-#define CPL_LSBINT32PTR(x)    ((*(GByte*)(x)) | ((*(GByte*)((x)+1)) << 8) | \
-                              ((*(GByte*)((x)+2)) << 16) | ((*(GByte*)((x)+3)) << 24))
+#define CPL_LSBINT32PTR(x)    ((*(GByte*)(x)) | (*(((GByte*)(x))+1) << 8) | \
+                              (*(((GByte*)(x))+2) << 16) | (*(((GByte*)(x))+3) << 24))
 
 /** Return a signed Int16 from the 2 bytes ordered in LSB order at address x */
 #define CPL_LSBSINT16PTR(x) ((GInt16) CPL_LSBINT16PTR(x))
@@ -571,7 +577,7 @@ char * strdup (char *instr);
 
 /***********************************************************************
  * Define CPL_CVSID() macro.  It can be disabled during a build by
- * defining DISABLE_CPLID in the compiler options.
+ * defining DISABLE_CVSID in the compiler options.
  *
  * The cvsid_aw() function is just there to prevent reports of cpl_cvsid()
  * being unused.
@@ -620,6 +626,29 @@ static char *cvsid_aw() { return( cvsid_aw() ? ((char *) NULL) : cpl_cvsid ); }
 #define CPL_NO_RETURN
 #endif
 
+/* Helper to remove the copy and assignment constructors so that the compiler
+   will not generate the default versions.
+
+   Must be placed in the private section of a class and should be at the end.
+*/
+#ifdef __cplusplus
+#if 1
+
+#if __cplusplus >= 201103L
+#define CPL_DISALLOW_COPY_ASSIGN(ClassName) \
+    ClassName( const ClassName & ) = delete; \
+    ClassName &operator=( const ClassName & ) = delete;
+#else
+#define CPL_DISALLOW_COPY_ASSIGN(ClassName) \
+    ClassName( const ClassName & ); \
+    ClassName &operator=( const ClassName & );
+#endif
+
+#else
+#define CPL_DISALLOW_COPY_ASSIGN(ClassName)
+#endif
+#endif /* __cplusplus */
+
 #if !defined(DOXYGEN_SKIP)
 #if defined(__has_extension)
   #if __has_extension(attribute_deprecated_with_message)
@@ -640,5 +669,20 @@ int vsnprintf(char *str, size_t size, const char* fmt, va_list args) CPL_WARN_DE
 int snprintf(char *str, size_t size, const char* fmt, ...) CPL_PRINT_FUNC_FORMAT(3,4) CPL_WARN_DEPRECATED("Use CPLsnprintf() instead");
 int sprintf(char *str, const char* fmt, ...) CPL_PRINT_FUNC_FORMAT(2, 3) CPL_WARN_DEPRECATED("Use CPLsprintf() instead");
 #endif
+
+#if defined(MAKE_SANITIZE_HAPPY) || !(defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64))
+#define CPL_CPU_REQUIRES_ALIGNED_ACCESS
+#define CPL_IS_DOUBLE_A_INT(d)  ( (d) >= INT_MIN && (d) <= INT_MAX && (double)(int)(d) == (d) )
+#else
+/* This is technically unspecified behaviour if the double is out of range, but works OK on x86 */
+#define CPL_IS_DOUBLE_A_INT(d)  ( (double)(int)(d) == (d) )
+#endif
+
+#ifdef __cplusplus
+/* The size of C style arrays. */
+#define CPL_ARRAYSIZE(array) \
+  ((sizeof(array) / sizeof(*(array))) / \
+  static_cast<size_t>(!(sizeof(array) % sizeof(*(array)))))
+#endif  /* __cplusplus */
 
 #endif /* ndef CPL_BASE_H_INCLUDED */

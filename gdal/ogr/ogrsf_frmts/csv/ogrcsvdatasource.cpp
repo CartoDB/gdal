@@ -408,6 +408,37 @@ int OGRCSVDataSource::OpenTable( const char * pszFilename,
         return FALSE;
     }
     char chDelimiter = CSVDetectSeperator(pszLine);
+    if( chDelimiter != '\t' && strchr(pszLine, '\t') != NULL )
+    {
+        /* Force the delimiter to be TAB for a .tsv file that has a tabulation */
+        /* in its first line */
+        if( EQUAL(osExt, "tsv") )
+        {
+            chDelimiter = '\t';
+        }
+        else
+        {
+            for(int bDontHonourStrings=0; bDontHonourStrings<=1; bDontHonourStrings++)
+            {
+                // Read the first 2 lines to see if they have the same number of fields, if using tabulation
+                VSIRewindL( fp );
+                char** papszTokens = OGRCSVReadParseLineL( fp, '\t', bDontHonourStrings );
+                int nTokens1 = CSLCount(papszTokens);
+                CSLDestroy(papszTokens);
+                papszTokens = OGRCSVReadParseLineL( fp, '\t', bDontHonourStrings );
+                int nTokens2 = CSLCount(papszTokens);
+                CSLDestroy(papszTokens);
+                if( nTokens1 >= 2 && nTokens1 == nTokens2 )
+                {
+                    chDelimiter = '\t';
+                    break;
+                }
+            }
+        }
+    }
+
+    VSIRewindL( fp );
+
 #if 0
     const char *pszDelimiter = CSLFetchNameValueDef( papszOpenOptions, "SEPARATOR", "AUTO");
     if( !EQUAL(pszDelimiter, "AUTO") )
@@ -428,16 +459,6 @@ int OGRCSVDataSource::OpenTable( const char * pszFilename,
         }
     }
 #endif
-
-    /* Force the delimiter to be TAB for a .tsv file that has a tabulation */
-    /* in its first line */
-    if( EQUAL(osExt, "tsv") && chDelimiter != '\t' &&
-        strchr(pszLine, '\t') != NULL )
-    {
-        chDelimiter = '\t';
-    }
-
-    VSIRewindL( fp );
 
     /* GNIS specific */
     if (pszGeonamesGeomFieldPrefix != NULL &&

@@ -231,7 +231,7 @@ void OGRSQLiteLayer::BuildFeatureDefn( const char *pszLayerName,
             else
             {
                 GIntBig nVal = sqlite3_column_int64(hStmt, iCol);
-                if( (GIntBig)(int)nVal == nVal )
+                if( CPL_INT64_FITS_ON_INT32(nVal) )
                     oField.SetType( OFTInteger );
                 else
                     oField.SetType( OFTInteger64 );
@@ -2271,7 +2271,22 @@ OGRErr OGRSQLiteLayer::createFromSpatialiteInternal(const GByte *pabyData,
         OGRGeometryCollection *poGC = NULL;
         GInt32 nGeomCount = 0;
         int iGeom = 0;
-        int nBytesUsed = 0;
+
+        if( nBytes < 8 )
+            return OGRERR_NOT_ENOUGH_DATA;
+
+        memcpy( &nGeomCount, pabyData + 4, 4 );
+        if (NEED_SWAP_SPATIALITE())
+            CPL_SWAP32PTR( &nGeomCount );
+
+        if (nGeomCount < 0 || nGeomCount > INT_MAX / 9)
+            return OGRERR_CORRUPT_DATA;
+
+        // Each sub geometry takes at least 9 bytes
+        if (nBytes - 8 < nGeomCount * 9)
+            return OGRERR_NOT_ENOUGH_DATA;
+
+        int nBytesUsed = 8;
 
         switch ( nGType )
         {
@@ -2314,22 +2329,6 @@ OGRErr OGRSQLiteLayer::createFromSpatialiteInternal(const GByte *pabyData,
         }
 
         assert(NULL != poGC);
-
-        if( nBytes < 8 )
-            return OGRERR_NOT_ENOUGH_DATA;
-
-        memcpy( &nGeomCount, pabyData + 4, 4 );
-        if (NEED_SWAP_SPATIALITE())
-            CPL_SWAP32PTR( &nGeomCount );
-
-        if (nGeomCount < 0 || nGeomCount > INT_MAX / 9)
-            return OGRERR_CORRUPT_DATA;
-
-        // Each sub geometry takes at least 9 bytes
-        if (nBytes - 8 < nGeomCount * 9)
-            return OGRERR_NOT_ENOUGH_DATA;
-
-        nBytesUsed = 8;
 
         for( iGeom = 0; iGeom < nGeomCount; iGeom++ )
         {
@@ -2843,6 +2842,14 @@ int OGRSQLiteLayer::ExportSpatiaLiteGeometryInternal(const OGRGeometry *poGeomet
             if (NEED_SWAP_SPATIALITE())
                 CPL_SWAP32PTR( pabyData );
 
+            if( !bUseComprGeom && !NEED_SWAP_SPATIALITE() &&
+                poGeometry->getCoordinateDimension() == 2 && !bHasM )
+            {
+                poLineString->getPoints((OGRRawPoint*)(pabyData + 4), NULL);
+                nTotalSize += nPointCount * 16;
+                return nTotalSize;
+            }
+
             for(int i=0;i<nPointCount;i++)
             {
                 double x = poLineString->getX(i);
@@ -3060,7 +3067,7 @@ OGRErr OGRSQLiteLayer::ExportSpatiaLiteGeometry( const OGRGeometry *poGeometry,
         *ppabyData = NULL;
         *pnDataLenght = 0;
         if( poWorkGeom != poGeometry ) delete poWorkGeom;
-        return CE_Failure;
+        return OGRERR_FAILURE;
     }
     memcpy( *ppabyData + 39, &nCode, 4 );
 
@@ -3076,7 +3083,7 @@ OGRErr OGRSQLiteLayer::ExportSpatiaLiteGeometry( const OGRGeometry *poGeometry,
         CPLFree(*ppabyData);
         *ppabyData = NULL;
         *pnDataLenght = 0;
-        return CE_Failure;
+        return OGRERR_FAILURE;
     }
 
     (*ppabyData)[nDataLen - 1] = 0xFE;
@@ -3093,7 +3100,7 @@ OGRErr OGRSQLiteLayer::ExportSpatiaLiteGeometry( const OGRGeometry *poGeometry,
 
     *pnDataLenght = nDataLen;
 
-    return CE_None;
+    return OGRERR_NONE;
 }
 
 /************************************************************************/

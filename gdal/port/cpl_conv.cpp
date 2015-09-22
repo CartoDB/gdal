@@ -91,12 +91,10 @@ static volatile CPLSharedFileInfoExtra *pasSharedFileListExtra = NULL;
 void *CPLCalloc( size_t nCount, size_t nSize )
 
 {
-    void        *pReturn;
-
     if( nSize * nCount == 0 )
         return NULL;
-    
-    pReturn = CPLMalloc( nCount * nSize );
+
+    void *pReturn = CPLMalloc( nCount * nSize );
     memset( pReturn, 0, nCount * nSize );
     return pReturn;
 }
@@ -123,37 +121,30 @@ void *CPLCalloc( size_t nCount, size_t nSize )
 void *CPLMalloc( size_t nSize )
 
 {
-    void        *pReturn;
-
-    CPLVerifyConfiguration();
-
     if( nSize == 0 )
         return NULL;
 
-    if( long(nSize) < 0 )
+    CPLVerifyConfiguration();
+
+    if( static_cast<long>(nSize) < 0 )
     {
         CPLError( CE_Failure, CPLE_AppDefined,
                   "CPLMalloc(%ld): Silly size requested.\n",
-                  (long) nSize );
+                  static_cast<long>(nSize) );
         return NULL;
     }
-    
-    pReturn = VSIMalloc( nSize );
+
+    void *pReturn = VSIMalloc( nSize );
     if( pReturn == NULL )
     {
         if( nSize > 0 && nSize < 2000 )
         {
-            char szSmallMsg[60];
-
-            sprintf( szSmallMsg, 
-                     "CPLMalloc(): Out of memory allocating %ld bytes.", 
-                     (long) nSize );
-            CPLEmergencyError( szSmallMsg ); 
+            CPLEmergencyError( "CPLMalloc(): Out of memory allocating a small number of bytes." );
         }
-        else
-            CPLError( CE_Fatal, CPLE_OutOfMemory,
-                      "CPLMalloc(): Out of memory allocating %ld bytes.\n",
-                      (long) nSize );
+
+        CPLError( CE_Fatal, CPLE_OutOfMemory,
+                  "CPLMalloc(): Out of memory allocating %ld bytes.\n",
+                  static_cast<long>(nSize) );
     }
 
     return pReturn;
@@ -186,27 +177,27 @@ void *CPLMalloc( size_t nSize )
 void * CPLRealloc( void * pData, size_t nNewSize )
 
 {
-    void        *pReturn;
-
     if ( nNewSize == 0 )
     {
         VSIFree(pData);
         return NULL;
     }
 
-    if( long(nNewSize) < 0 )
+    if( static_cast<long>(nNewSize) < 0 )
     {
         CPLError( CE_Failure, CPLE_AppDefined,
                   "CPLRealloc(%ld): Silly size requested.\n",
                   (long) nNewSize );
         return NULL;
     }
-    
+
+    void        *pReturn;
+
     if( pData == NULL )
         pReturn = VSIMalloc( nNewSize );
     else
         pReturn = VSIRealloc( pData, nNewSize );
-    
+
     if( pReturn == NULL )
     {
         if( nNewSize > 0 && nNewSize < 2000 )
@@ -328,8 +319,6 @@ char *CPLStrlwr( char *pszString )
 char *CPLFGets( char *pszBuffer, int nBufferSize, FILE * fp )
 
 {
-    int nActuallyRead, nOriginalOffset;
-
     if ( nBufferSize == 0 || pszBuffer == NULL || fp == NULL )
         return NULL;
 
@@ -340,11 +329,11 @@ char *CPLFGets( char *pszBuffer, int nBufferSize, FILE * fp )
 /*      just the newline (LF).  If it is in binary mode it may well     */
 /*      have both.                                                      */
 /* -------------------------------------------------------------------- */
-    nOriginalOffset = VSIFTell( fp );
+    int nOriginalOffset = VSIFTell( fp );
     if( VSIFGets( pszBuffer, nBufferSize, fp ) == NULL )
         return NULL;
-    
-    nActuallyRead = strlen(pszBuffer);
+
+    int nActuallyRead = strlen(pszBuffer);
     if ( nActuallyRead == 0 )
         return NULL;
 
@@ -355,12 +344,15 @@ char *CPLFGets( char *pszBuffer, int nBufferSize, FILE * fp )
     if( nBufferSize == nActuallyRead+1
         && pszBuffer[nActuallyRead-1] == 13 )
     {
-        int chCheck;
-        chCheck = fgetc( fp );
+        int chCheck = fgetc( fp );
         if( chCheck != 10 )
         {
             // unget the character.
-            VSIFSeek( fp, nOriginalOffset+nActuallyRead, SEEK_SET );
+            if (VSIFSeek( fp, nOriginalOffset+nActuallyRead, SEEK_SET ) == -1)
+            {
+                CPLError( CE_Failure, CPLE_FileIO,
+                          "Unable to unget a character");
+            }
         }
     }
 
@@ -368,13 +360,13 @@ char *CPLFGets( char *pszBuffer, int nBufferSize, FILE * fp )
 /*      Trim off \n, \r or \r\n if it appears at the end.  We don't     */
 /*      need to do any "seeking" since we want the newline eaten.       */
 /* -------------------------------------------------------------------- */
-    if( nActuallyRead > 1 
-        && pszBuffer[nActuallyRead-1] == 10 
+    if( nActuallyRead > 1
+        && pszBuffer[nActuallyRead-1] == 10
         && pszBuffer[nActuallyRead-2] == 13 )
     {
         pszBuffer[nActuallyRead-2] = '\0';
     }
-    else if( pszBuffer[nActuallyRead-1] == 10 
+    else if( pszBuffer[nActuallyRead-1] == 10
              || pszBuffer[nActuallyRead-1] == 13 )
     {
         pszBuffer[nActuallyRead-1] = '\0';
@@ -389,29 +381,27 @@ char *CPLFGets( char *pszBuffer, int nBufferSize, FILE * fp )
     
     if( pszExtraNewline != NULL )
     {
-        int chCheck;
-
         nActuallyRead = pszExtraNewline - pszBuffer + 1;
-        
+
         *pszExtraNewline = '\0';
         VSIFSeek( fp, nOriginalOffset + nActuallyRead - 1, SEEK_SET );
 
-        /* 
+        /*
          * This hackery is necessary to try and find our correct
          * spot on win32 systems with text mode line translation going 
          * on.  Sometimes the fseek back overshoots, but it doesn't
          * "realize it" till a character has been read. Try to read till
-         * we get to the right spot and get our CR. 
-         */ 
-        chCheck = fgetc( fp );
+         * we get to the right spot and get our CR.
+         */
+        int chCheck = fgetc( fp );
         while( (chCheck != 13 && chCheck != EOF)
                || VSIFTell(fp) < nOriginalOffset + nActuallyRead )
         {
-            static volatile int bWarned = FALSE;
+            static volatile bool bWarned = false;
 
             if( !bWarned )
             {
-                bWarned = TRUE;
+                bWarned = true;
                 CPLDebug( "CPL", "CPLFGets() correcting for DOS text mode translation seek problem." );
             }
             chCheck = fgetc( fp );
@@ -635,7 +625,7 @@ const char *CPLReadLine2L( VSILFILE * fp, int nMaxCars, char** papszOptions )
     int nBufLength = 0;
     size_t nChunkBytesConsumed = 0;
 
-    while( TRUE )
+    while( true )
     {
 /* -------------------------------------------------------------------- */
 /*      Read a chunk from the input file.                               */
@@ -675,11 +665,11 @@ const char *CPLReadLine2L( VSILFILE * fp, int nMaxCars, char** papszOptions )
                     break;
             }
         }
-        
+
 /* -------------------------------------------------------------------- */
 /*      copy over characters watching for end-of-line.                  */
 /* -------------------------------------------------------------------- */
-        int bBreak = FALSE;
+        bool bBreak = false;
         while( nChunkBytesConsumed < nChunkBytesRead-1 && !bBreak )
         {
             if( (szChunk[nChunkBytesConsumed] == 13
@@ -688,13 +678,13 @@ const char *CPLReadLine2L( VSILFILE * fp, int nMaxCars, char** papszOptions )
                     && szChunk[nChunkBytesConsumed+1] == 13) )
             {
                 nChunkBytesConsumed += 2;
-                bBreak = TRUE;
+                bBreak = true;
             }
             else if( szChunk[nChunkBytesConsumed] == 10
                      || szChunk[nChunkBytesConsumed] == 13 )
             {
                 nChunkBytesConsumed += 1;
-                bBreak = TRUE;
+                bBreak = true;
             }
             else
             {
@@ -1482,32 +1472,42 @@ int CPLPrintTime( char *pszBuffer, int nMaxLen, const char *pszFormat,
 void CPLVerifyConfiguration()
 
 {
+    static bool verified = false;
+    if (!verified) {
+        return;
+    }
+    verified = true;
+
 /* -------------------------------------------------------------------- */
 /*      Verify data types.                                              */
 /* -------------------------------------------------------------------- */
+#if __cplusplus >= 201103L
+    static_assert(sizeof(GInt32) == 4, "GInt32 must be 4 bytes");
+    static_assert(sizeof(GInt16) == 2, "GInt16 must be 2 bytes");
+    static_assert(sizeof(GByte) == 1, "GInt32 must be 1 byte");
+#else
+    if( sizeof(GInt32) != 4 )
+        CPLError( CE_Fatal, CPLE_AppDefined,
+                  "sizeof(GInt32) == %d ... yow!\n",
+                  (int) sizeof(GInt32) );
+
     CPLAssert( sizeof(GInt32) == 4 );
     CPLAssert( sizeof(GInt16) == 2 );
     CPLAssert( sizeof(GByte) == 1 );
-
-    if( sizeof(GInt32) != 4 )
-        CPLError( CE_Fatal, CPLE_AppDefined, 
-                  "sizeof(GInt32) == %d ... yow!\n", 
-                  (int) sizeof(GInt32) );
+#endif
 
 /* -------------------------------------------------------------------- */
 /*      Verify byte order                                               */
 /* -------------------------------------------------------------------- */
-    GInt32   nTest;
-
-    nTest = 1;
+    GInt32   nTest = 1;
 
 #ifdef CPL_LSB
     if( ((GByte *) &nTest)[0] != 1 )
 #endif
 #ifdef CPL_MSB
     if( ((GByte *) &nTest)[3] != 1 )
-#endif    
-        CPLError( CE_Fatal, CPLE_AppDefined, 
+#endif
+        CPLError( CE_Fatal, CPLE_AppDefined,
                   "CPLVerifyConfiguration(): byte order set wrong.\n" );
 }
 
@@ -1630,11 +1630,35 @@ CPLGetConfigOption( const char *pszKey, const char *pszDefault )
         pszResult = CSLFetchNameValue( (char **) papszConfigOptions, pszKey );
     }
 
-#if !defined(WIN32CE) 
+#if !defined(WIN32CE)
     if( pszResult == NULL )
         pszResult = getenv( pszKey );
 #endif
-    
+
+    if( pszResult == NULL )
+        return pszDefault;
+    else
+        return pszResult;
+}
+
+/************************************************************************/
+/*                   CPLGetThreadLocalConfigOption()                    */
+/************************************************************************/
+
+const char * CPL_STDCALL
+CPLGetThreadLocalConfigOption( const char *pszKey, const char *pszDefault )
+
+{
+#ifdef DEBUG_CONFIG_OPTIONS
+    CPLAccessConfigOption(pszKey, TRUE);
+#endif
+
+    const char *pszResult = NULL;
+
+    char **papszTLConfigOptions = (char **) CPLGetTLS( CTLS_CONFIGOPTIONS );
+    if( papszTLConfigOptions != NULL )
+        pszResult = CSLFetchNameValue( papszTLConfigOptions, pszKey );
+
     if( pszResult == NULL )
         return pszDefault;
     else
@@ -1892,28 +1916,21 @@ const char *CPLDecToDMS( double dfAngle, const char * pszAxis,
 {
     VALIDATE_POINTER1( pszAxis, "CPLDecToDMS", "" );
 
-    int         nDegrees, nMinutes;
-    double      dfSeconds, dfABSAngle, dfEpsilon;
-    char        szFormat[30];
-    const char  *pszHemisphere;
-    static CPL_THREADLOCAL char szBuffer[50] = { 0 };
-    
-    
-    dfEpsilon = (0.5/3600.0) * pow(0.1,nPrecision);
-
-    dfABSAngle = ABS(dfAngle) + dfEpsilon;
+    const double dfEpsilon = (0.5/3600.0) * pow(0.1,nPrecision);
+    const double dfABSAngle = ABS(dfAngle) + dfEpsilon;
     if (dfABSAngle > 361)
     {
         return "Invalid angle";
     }
 
-    nDegrees = (int) dfABSAngle;
-    nMinutes = (int) ((dfABSAngle - nDegrees) * 60);
-    dfSeconds = dfABSAngle * 3600 - nDegrees*3600 - nMinutes*60;
+    const int nDegrees = (int) dfABSAngle;
+    const int nMinutes = (int) ((dfABSAngle - nDegrees) * 60);
+    double dfSeconds = dfABSAngle * 3600 - nDegrees*3600 - nMinutes*60;
 
     if( dfSeconds > dfEpsilon * 3600.0 )
         dfSeconds -= dfEpsilon * 3600.0;
 
+    const char  *pszHemisphere;
     if( EQUAL(pszAxis,"Long") && dfAngle < 0.0 )
         pszHemisphere = "W";
     else if( EQUAL(pszAxis,"Long") )
@@ -1923,8 +1940,15 @@ const char *CPLDecToDMS( double dfAngle, const char * pszAxis,
     else
         pszHemisphere = "N";
 
-    CPLsprintf( szFormat, "%%3dd%%2d\'%%%d.%df\"%s", nPrecision+3, nPrecision, pszHemisphere );
-    CPLsprintf( szBuffer, szFormat, nDegrees, nMinutes, dfSeconds );
+    char szFormat[30];
+    CPLsnprintf( szFormat, sizeof(szFormat),
+                 "%%3dd%%2d\'%%%d.%df\"%s",
+                 nPrecision+3, nPrecision, pszHemisphere );
+
+    static CPL_THREADLOCAL char szBuffer[50] = { 0 };
+    CPLsnprintf( szBuffer, sizeof(szBuffer),
+                 szFormat,
+                 nDegrees, nMinutes, dfSeconds );
 
     return( szBuffer );
 }
@@ -1978,14 +2002,12 @@ const char *CPLDecToDMS( double dfAngle, const char * pszAxis,
 
 double CPLPackedDMSToDec( double dfPacked )
 {
-    double  dfDegrees, dfMinutes, dfSeconds, dfSign;
+    const double dfSign = ( dfPacked < 0.0 )? -1 : 1;
 
-    dfSign = ( dfPacked < 0.0 )? -1 : 1;
-        
-    dfSeconds = ABS( dfPacked );
-    dfDegrees = floor(dfSeconds / 1000000.0);
+    double dfSeconds = ABS( dfPacked );
+    double dfDegrees = floor(dfSeconds / 1000000.0);
     dfSeconds = dfSeconds - dfDegrees * 1000000.0;
-    dfMinutes = floor(dfSeconds / 1000.0);
+    double dfMinutes = floor(dfSeconds / 1000.0);
     dfSeconds = dfSeconds - dfMinutes * 1000.0;
     dfSeconds = dfSign * ( dfDegrees * 3600.0 + dfMinutes * 60.0 + dfSeconds);
     dfDegrees = dfSeconds / 3600.0;
@@ -2758,13 +2780,12 @@ int CPLCheckForFile( char *pszFilename, char **papszSiblingFiles )
 /*      of pszFilename too all entries.                                 */
 /* -------------------------------------------------------------------- */
     CPLString osFileOnly = CPLGetFilename( pszFilename );
-    int i;
 
-    for( i = 0; papszSiblingFiles[i] != NULL; i++ )
+    for( int i = 0; papszSiblingFiles[i] != NULL; i++ )
     {
         if( EQUAL(papszSiblingFiles[i],osFileOnly) )
         {
-            strcpy( pszFilename + strlen(pszFilename) - strlen(osFileOnly), 
+            strcpy( pszFilename + strlen(pszFilename) - strlen(osFileOnly),
                     papszSiblingFiles[i] );
             return TRUE;
         }
