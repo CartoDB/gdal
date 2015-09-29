@@ -1,14 +1,12 @@
 /******************************************************************************
+ * $Id$
  *
- * Project:  VICAR Driver; JPL/MIPL VICAR Format
- * Purpose:  Implementation of VICARKeywordHandler - a class to read
- *           keyword data from VICAR data products.
- * Authors:  Sebastian Walter <sebastian dot walter at fu-berlin dot de>
+ * Project:  WMS Client Driver
+ * Purpose:  Mini driver for Internel Imaging Protocol (IIP)
+ * Author:   Even Rouault <even.rouault at spatialys.com>
  *
- * NOTE: This driver code is loosely based on the ISIS and PDS drivers.
- * It is not intended to diminish the contribution of the authors.
  ******************************************************************************
- * Copyright (c) 2014, Sebastian Walter <sebastian dot walter at fu-berlin dot de>
+ * Copyright (c) 2015, Even Rouault <even.rouault at spatialys.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -28,26 +26,19 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  ****************************************************************************/
-class VICARKeywordHandler
-{
-    char     **papszKeywordList;
 
-    CPLString osHeaderText;
-    const char *pszHeaderNext;
+H_GDALWMSMiniDriverFactory(IIP)
 
-    int     LabelSize;
-
-    void    SkipWhite();
-    int     ReadWord( CPLString &osWord );
-    int     ReadPair( CPLString &osName, CPLString &osValue );
-    int     ReadGroup( const char *pszPathPrefix );
+class GDALWMSMiniDriver_IIP : public GDALWMSMiniDriver {
+public:
+    GDALWMSMiniDriver_IIP();
+    virtual ~GDALWMSMiniDriver_IIP();
 
 public:
-    VICARKeywordHandler();
-    ~VICARKeywordHandler();
+    virtual CPLErr Initialize(CPLXMLNode *config);
+    virtual void GetCapabilities(GDALWMSMiniDriverCapabilities *caps);
+    virtual void TiledImageRequest(CPLString *url, const GDALWMSImageRequestInfo &iri, const GDALWMSTiledImageRequestInfo &tiri);
 
-    int     Ingest( VSILFILE *fp, GByte *pabyHeader );
-
-    const char *GetKeyword( const char *pszPath, const char *pszDefault );
-    char **GetKeywordList();
+protected:
+    CPLString m_base_url;
 };

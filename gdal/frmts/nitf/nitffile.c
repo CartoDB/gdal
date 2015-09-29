@@ -1675,7 +1675,7 @@ void NITFExtractMetadata( char ***ppapszMetadata, const char *pachHeader,
     if (szWork != pszWork)
         CPLFree(pszWork);
 }
-                          
+
 /************************************************************************/
 /*        NITF_WGS84_Geocentric_Latitude_To_Geodetic_Latitude()         */
 /*                                                                      */
@@ -1686,7 +1686,7 @@ void NITFExtractMetadata( char ***ppapszMetadata, const char *pachHeader,
 /*
  * "The angle L' is called "geocentric latitude" and is defined as the
  * angle between the equatorial plane and the radius from the geocenter.
- * 
+ *
  * The angle L is called "geodetic latitude" and is defined as the angle
  * between the equatorial plane and the normal to the surface of the
  * ellipsoid.  The word "latitude" usually means geodetic latitude.  This
@@ -1699,18 +1699,17 @@ double NITF_WGS84_Geocentric_Latitude_To_Geodetic_Latitude( double dfLat )
 
 {
     /* WGS84 Ellipsoid */
-    double a = 6378137.0;
-    double b = 6356752.3142;
-    double dfPI = 3.14159265358979323;
+    const double a = 6378137.0;
+    const double b = 6356752.3142;
 
     /* convert to radians */
-    dfLat = dfLat * dfPI / 180.0;
+    dfLat = dfLat * M_PI / 180.0;
 
     /* convert to geodetic */
     dfLat = atan( ((a*a)/(b*b)) * tan(dfLat) );
 
     /* convert back to degrees */
-    dfLat = dfLat * 180.0 / dfPI;
+    dfLat = dfLat * 180.0 / M_PI;
 
     return dfLat;
 }

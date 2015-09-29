@@ -393,7 +393,7 @@ netCDFRasterBand::netCDFRasterBand( netCDFDataset *poNCDFDS,
     if ( nc_datatype == NC_UBYTE )
         this->bSignedData = FALSE;
 #endif
-    
+
     CPLDebug( "GDAL_netCDF", "netcdf type=%d gdal type=%d signedByte=%d",
               nc_datatype, eDataType, bSignedData );
 
@@ -446,7 +446,7 @@ netCDFRasterBand::netCDFRasterBand( netCDFDataset *poNCDFDS,
             nBlockXSize = (int) chunksize[nZDim-1];
             nBlockYSize = (int) chunksize[nZDim-2];
         }
-	} 		
+	}
 #endif
 
 /* -------------------------------------------------------------------- */
@@ -511,7 +511,7 @@ netCDFRasterBand::netCDFRasterBand( netCDFDataset *poNCDFDS,
                   "Dataset is not in update mode, wrong netCDFRasterBand constructor" );
         return;
     }
-    
+
 /* -------------------------------------------------------------------- */
 /*      Take care of all other dimmensions                              */
 /* ------------------------------------------------------------------ */
@@ -576,12 +576,12 @@ netCDFRasterBand::netCDFRasterBand( netCDFDataset *poNCDFDS,
 
         /* make sure we are in define mode */
         ( ( netCDFDataset * ) poDS )->SetDefineMode( TRUE );
-        
+
         if ( !pszBandName || EQUAL(pszBandName,"")  )
             sprintf( szTemp, "Band%d", nBand );
         else 
             strcpy( szTemp, pszBandName );
-        
+
         if ( nZDim > 2 && paDimIds != NULL ) {
             status = nc_def_var( cdfid, szTemp, nc_datatype, 
                                  nZDim, paDimIds, &nZId );
@@ -597,7 +597,7 @@ netCDFRasterBand::netCDFRasterBand( netCDFDataset *poNCDFDS,
         CPLDebug( "GDAL_netCDF", "nc_def_var(%d,%s,%d) id=%d",
                   cdfid, szTemp, nc_datatype, nZId );
         this->nZId = nZId;
-        
+
         if ( !pszLongName || EQUAL(pszLongName,"")  )
             sprintf( szTemp, "GDAL Band Number %d", nBand );
         else 
@@ -605,7 +605,7 @@ netCDFRasterBand::netCDFRasterBand( netCDFDataset *poNCDFDS,
         status =  nc_put_att_text( cdfid, nZId, CF_LNG_NAME, 
                                    strlen( szTemp ), szTemp );
         NCDF_ERR(status);
-        
+
         poNCDFDS->DefVarDeflate(nZId, TRUE);
     }
 
@@ -1040,14 +1040,14 @@ CPLErr netCDFRasterBand::CreateBandMetadata( int *paDimIds )
                     /* status = */ nc_get_vara_short( cdfid, nVarID,
                                                  start,
                                                  count, &sData );
-                    sprintf( szMetaTemp,"%d", sData );
+                    snprintf( szMetaTemp, sizeof(szMetaTemp), "%d", sData );
                     break;
                 case NC_INT:
                     int nData;
                     /* status = */ nc_get_vara_int( cdfid, nVarID,
                                                start,
                                                count, &nData );
-                    sprintf( szMetaTemp,"%d", nData );
+                    snprintf( szMetaTemp, sizeof(szMetaTemp), "%d", nData );
                     break;
                 case NC_FLOAT:
                     float fData;
@@ -1061,7 +1061,7 @@ CPLErr netCDFRasterBand::CreateBandMetadata( int *paDimIds )
                     /* status = */ nc_get_vara_double( cdfid, nVarID,
                                                   start,
                                                   count, &dfData);
-                    CPLsprintf( szMetaTemp,"%.16g", dfData );
+                    CPLsnprintf( szMetaTemp, sizeof(szMetaTemp), "%.16g", dfData );
                     break;
                 default:
                     CPLDebug( "GDAL_netCDF", "invalid dim %s, type=%d",
@@ -2342,8 +2342,8 @@ void netCDFDataset::SetProjectionFromVar( int nVarId )
                             /* use Snyder eq. 15-4 to compute dfScale from dfStdP1 and dfCenterLat */
                             /* only tested for dfStdP1=dfCenterLat and (25,26), needs more data for testing */
                             /* other option: use the 2SP variant - how to compute new standard parallels? */
-                            dfScale = ( cos(dfStdP1) * pow( tan(NCDF_PI/4 + dfStdP1/2), sin(dfStdP1) ) ) /
-                                ( cos(dfCenterLat) * pow( tan(NCDF_PI/4 + dfCenterLat/2), sin(dfCenterLat) ) );
+                            dfScale = ( cos(dfStdP1) * pow( tan(M_PI/4 + dfStdP1/2), sin(dfStdP1) ) ) /
+                                ( cos(dfCenterLat) * pow( tan(M_PI/4 + dfCenterLat/2), sin(dfCenterLat) ) );
                         }
                         /* default is 1.0 */
                         else                    
@@ -2498,14 +2498,14 @@ void netCDFDataset::SetProjectionFromVar( int nVarId )
                 if ( papszStdParallels != NULL ) {
                     dfStdP1 = CPLAtofM( papszStdParallels[0] );
                     /* compute scale_factor from standard_parallel */
-                    /* this creates WKT that is inconsistent, don't write for now 
-                       also proj4 does not seem to use this parameter */                    
-                    // dfScale = ( 1.0 + fabs( sin( dfStdP1 * NCDF_PI / 180.0 ) ) ) / 2.0;
+                    /* this creates WKT that is inconsistent, don't write for now
+                       also proj4 does not seem to use this parameter */
+                    // dfScale = ( 1.0 + fabs( sin( dfStdP1 * M_PI / 180.0 ) ) ) / 2.0;
                 }
                 else {
                     if ( ! CPLIsEqual(dfScale,-1.0) ) {
                         /* compute standard_parallel from scale_factor */
-                        dfStdP1 = asin( 2*dfScale - 1 ) * 180.0 / NCDF_PI;
+                        dfStdP1 = asin( 2*dfScale - 1 ) * 180.0 / M_PI;
 
                         /* fetch latitude_of_projection_origin (+90/-90) 
                            used here for the sign of standard_parallel */
@@ -6501,7 +6501,7 @@ CPLErr NCDFGetAttr1( int nCdfId, int nVarId, const char *pszAttrName,
                 CPLsnprintf( szTemp, sizeof(szTemp), "%.16g,", pdfTemp[m] );
                 NCDFSafeStrcat(&pszAttrValue, szTemp, &nAttrValueSize);
             }
-            CPLsprintf( szTemp, "%.16g", pdfTemp[m] );
+            CPLsnprintf( szTemp, sizeof(szTemp), "%.16g", pdfTemp[m] );
             NCDFSafeStrcat(&pszAttrValue, szTemp, &nAttrValueSize);
             CPLFree(pdfTemp);
             break;
@@ -6749,7 +6749,7 @@ CPLErr NCDFGet1DVar( int nCdfId, int nVarId, char **pszValue )
               CPLsnprintf( szTemp, sizeof(szTemp), "%.16g,", pdfTemp[m] );
                 NCDFSafeStrcat(&pszVarValue, szTemp, &nVarValueSize);
             }
-            CPLsprintf( szTemp, "%.16g", pdfTemp[m] );
+            CPLsnprintf( szTemp, sizeof(szTemp), "%.16g", pdfTemp[m] );
             NCDFSafeStrcat(&pszVarValue, szTemp, &nVarValueSize);
             CPLFree(pdfTemp);
             break;
@@ -6761,7 +6761,7 @@ CPLErr NCDFGet1DVar( int nCdfId, int nVarId, char **pszValue )
             break;
     }
 
-    if ( nVarLen > 1  && nVarType!= NC_CHAR )    
+    if ( nVarLen > 1  && nVarType!= NC_CHAR )
         NCDFSafeStrcat(&pszVarValue, (char *)"}", &nVarValueSize);
 
     /* set return values */
@@ -6775,10 +6775,9 @@ CPLErr NCDFPut1DVar( int nCdfId, int nVarId, const char *pszValue )
     nc_type nVarType = NC_CHAR;
     size_t  nVarLen = 0;
     int     status = 0;
-    size_t  i;
     char    *pszTemp = NULL;
     char    **papszValues = NULL;
-    
+
     int     nVarDimId=-1;
     size_t start[1], count[1];
 
@@ -6803,7 +6802,7 @@ CPLErr NCDFPut1DVar( int nCdfId, int nVarId, const char *pszValue )
 
     /* get the values as tokens */
     papszValues = NCDFTokenizeArray( pszValue );
-    if ( papszValues == NULL ) 
+    if ( papszValues == NULL )
         return CE_Failure;
 
     nVarLen = CSLCount(papszValues);
@@ -6815,13 +6814,13 @@ CPLErr NCDFPut1DVar( int nCdfId, int nVarId, const char *pszValue )
         NCDF_ERR(status);                        
     }
     else {
-        
+
         switch( nVarType ) {
             /* TODO add other types */
             case  NC_INT:
                 int *pnTemp;
                 pnTemp = (int *) CPLCalloc( nVarLen, sizeof( int ) );
-                for(i=0; i < nVarLen; i++) {
+                for(size_t i=0; i < nVarLen; i++) {
                     pnTemp[i] = strtol( papszValues[i], &pszTemp, 10 );
                 }
                 status = nc_put_vara_int( nCdfId, nVarId, start, count, pnTemp );  
@@ -6831,7 +6830,7 @@ CPLErr NCDFPut1DVar( int nCdfId, int nVarId, const char *pszValue )
             case  NC_FLOAT:
                 float *pfTemp;
                 pfTemp = (float *) CPLCalloc( nVarLen, sizeof( float ) );
-                for(i=0; i < nVarLen; i++) {
+                for(size_t i=0; i < nVarLen; i++) {
                     pfTemp[i] = (float)CPLStrtod( papszValues[i], &pszTemp );
                 }
                 status = nc_put_vara_float( nCdfId, nVarId, start, count, 
@@ -6842,7 +6841,7 @@ CPLErr NCDFPut1DVar( int nCdfId, int nVarId, const char *pszValue )
             case  NC_DOUBLE:
                 double *pdfTemp;
                 pdfTemp = (double *) CPLCalloc( nVarLen, sizeof( double ) );
-                for(i=0; i < nVarLen; i++) {
+                for(size_t i=0; i < nVarLen; i++) {
                     pdfTemp[i] = CPLStrtod( papszValues[i], &pszTemp );
                 }
                 status = nc_put_vara_double( nCdfId, nVarId, start, count, 
@@ -6854,12 +6853,13 @@ CPLErr NCDFPut1DVar( int nCdfId, int nVarId, const char *pszValue )
             if ( papszValues ) CSLDestroy( papszValues );
             return CE_Failure;
             break;
-        }   
+        }
     }
 
-    if ( papszValues ) CSLDestroy( papszValues );
+    if ( papszValues )
+        CSLDestroy( papszValues );
 
-     return CE_None;
+    return CE_None;
 }
 
 
@@ -6876,7 +6876,7 @@ double NCDFGetDefaultNoDataValue( int nVarType )
         case NC_BYTE:
 #ifdef NETCDF_HAS_NC4
         case NC_UBYTE:
-#endif    
+#endif
             /* don't do default fill-values for bytes, too risky */
             dfNoData = 0.0;
             break;
@@ -6901,7 +6901,7 @@ double NCDFGetDefaultNoDataValue( int nVarType )
     }
 
     return dfNoData;
-} 
+}
 
 
 int NCDFDoesVarContainAttribVal( int nCdfId,
@@ -6916,7 +6916,7 @@ int NCDFDoesVarContainAttribVal( int nCdfId,
 
     if ( (nVarId == -1) && (pszVarName != NULL) )
         nc_inq_varid( nCdfId, pszVarName, &nVarId );
-    
+
     if ( nVarId == -1 ) return -1;
 
     for( int i=0; !bFound && i<CSLCount((char**)papszAttribNames); i++ ) {
@@ -6948,7 +6948,7 @@ int NCDFDoesVarContainAttribVal2( int nCdfId,
 
     if ( (nVarId == -1) && (pszVarName != NULL) )
         nc_inq_varid( nCdfId, pszVarName, &nVarId );
-    
+
     if ( nVarId == -1 ) return -1;
 
     if ( NCDFGetAttr( nCdfId, nVarId, papszAttribName, &pszTemp ) 
@@ -7104,14 +7104,12 @@ int NCDFIsVarTimeCoord( int nCdfId, int nVarId,
 /* else return a copy */
 char **NCDFTokenizeArray( const char *pszValue )
 {
-    char **papszValues = NULL;
-    char *pszTemp = NULL;
-    int nLen = 0;
-
-    if ( pszValue==NULL || EQUAL( pszValue, "" ) ) 
+    if ( pszValue==NULL || EQUAL( pszValue, "" ) )
         return NULL;
 
-    nLen = strlen(pszValue);
+    char **papszValues = NULL;
+    char *pszTemp = NULL;
+    int nLen = strlen(pszValue);
 
     if ( ( pszValue[0] == '{' ) && ( pszValue[nLen-1] == '}' ) ) {
         pszTemp = (char *) CPLCalloc(nLen-2,sizeof(char*));
@@ -7125,6 +7123,6 @@ char **NCDFTokenizeArray( const char *pszValue )
         papszValues[0] = CPLStrdup( pszValue );
         papszValues[1] = NULL;
     }
-    
+
     return papszValues;
 }

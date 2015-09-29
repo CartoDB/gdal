@@ -66,10 +66,10 @@ testperfcopywords: testperfcopywords.cpp
 testcopywords: testcopywords.cpp
 	$(CXX) -O2 $(CXXFLAGS) $< $(LDFLAGS) -o $@
 
-testclosedondestroydm: testclosedondestroydm.c
+testclosedondestroydm: testclosedondestroydm.cpp
 	$(CXX) -g $(CXXFLAGS) $< $(LDFLAGS) -o $@
 
-testthreadcond: testthreadcond.c
+testthreadcond: testthreadcond.cpp
 	$(CXX) -g $(CXXFLAGS) $< $(LDFLAGS) -o $@
 
 test_virtualmem: test_virtualmem.cpp

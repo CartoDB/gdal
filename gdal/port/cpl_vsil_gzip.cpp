@@ -930,7 +930,11 @@ uLong VSIGZipHandle::getLong ()
     x += ((uLong)get_byte())<<8;
     x += ((uLong)get_byte())<<16;
     const int c = get_byte();
-    if (c == EOF) z_err = Z_DATA_ERROR;
+    if (c == EOF)
+    {
+        z_err = Z_DATA_ERROR;
+        return 0;
+    }
     x += ((uLong)c)<<24;
     return x;
 }
@@ -2088,14 +2092,7 @@ VSIVirtualHandle* VSIZipFilesystemHandler::OpenForWrite_unlocked( const char *ps
     std::map<CPLString,VSIArchiveContent*>::iterator iter = oFileList.find(osZipFilename);
     if (iter != oFileList.end())
     {
-        VSIArchiveContent* content = iter->second;
-        for(int i=0;i<content->nEntries;i++)
-        {
-            delete content->entries[i].file_pos;
-            CPLFree(content->entries[i].fileName);
-        }
-        CPLFree(content->entries);
-        delete content;
+        delete iter->second;
 
         oFileList.erase(iter);
     }

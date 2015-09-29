@@ -655,7 +655,7 @@ void OGRUnionLayer::AutoWarpLayerIfNecessary(int iLayer)
                         OGRCreateCoordinateTransformation( poSRS2, poSRS );
                     OGRCoordinateTransformation* poReversedCT = (poCT != NULL) ?
                         OGRCreateCoordinateTransformation( poSRS, poSRS2 ) : NULL;
-                    if( poCT != NULL && poReversedCT != NULL )
+                    if( poReversedCT != NULL )
                         papoSrcLayers[iLayer] = new OGRWarpedLayer(
                                     papoSrcLayers[iLayer], iSrcGeomField, TRUE, poCT, poReversedCT);
                     else
@@ -663,10 +663,8 @@ void OGRUnionLayer::AutoWarpLayerIfNecessary(int iLayer)
                         CPLError(CE_Warning, CPLE_AppDefined,
                                  "AutoWarpLayerIfNecessary failed to create "
                                  "poCT or poReversedCT.");
-                        if ( poCT == NULL )
+                        if ( poCT != NULL )
                             delete poCT;
-                        if ( poReversedCT == NULL )
-                            delete poReversedCT;
                     }
                 }
             }

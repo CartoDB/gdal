@@ -33,14 +33,10 @@
 #include "cpl_conv.h"
 #include "cpl_string.h"
 
-#include <string>
 #include <fstream>
+#include <string>
 
 CPL_CVSID("$Id$");
-
-#ifndef PI
-#define PI  3.14159265358979323846
-#endif
 
 /***************************************************************************************************************
 * Recode the given string from a source encoding to UTF-8 encoding.
@@ -1600,7 +1596,7 @@ S57StrokeArcToOGRGeometry_Angles( double dfCenterX, double dfCenterY,
     {
         double      dfAngle;
 
-        dfAngle = (dfStartAngle + iPoint * dfSlice) * PI / 180.0;
+        dfAngle = (dfStartAngle + iPoint * dfSlice) * M_PI / 180.0;
             
         dfArcX = dfCenterX + cos(dfAngle) * dfRadius;
         dfArcY = dfCenterY + sin(dfAngle) * dfRadius;
@@ -1637,11 +1633,11 @@ S57StrokeArcToOGRGeometry_Points( double dfStartX, double dfStartY,
 
         dfDeltaX = dfStartX - dfCenterX;
         dfDeltaY = dfStartY - dfCenterY;
-        dfStartAngle = atan2(dfDeltaY,dfDeltaX) * 180.0 / PI;
+        dfStartAngle = atan2(dfDeltaY,dfDeltaX) * 180.0 / M_PI;
 
         dfDeltaX = dfEndX - dfCenterX;
         dfDeltaY = dfEndY - dfCenterY;
-        dfEndAngle = atan2(dfDeltaY,dfDeltaX) * 180.0 / PI;
+        dfEndAngle = atan2(dfDeltaY,dfDeltaX) * 180.0 / M_PI;
 
 #ifdef notdef
         if( dfStartAngle > dfAlongAngle && dfAlongAngle > dfEndAngle )
@@ -1928,7 +1924,6 @@ void S57Reader::AssembleSoundingGeometry( DDFRecord * poFRecord,
     DDFField    *poFSPT;
     int         nRCNM, nRCID;
     DDFRecord   *poSRecord;
-    
 
 /* -------------------------------------------------------------------- */
 /*      Feature the spatial record containing the point.                */
@@ -1939,7 +1934,7 @@ void S57Reader::AssembleSoundingGeometry( DDFRecord * poFRecord,
 
     if( poFSPT->GetRepeatCount() != 1 )
         return;
-        
+
     nRCID = ParseName( poFSPT, 0, &nRCNM );
 
     if( nRCNM == RCNM_VI )
@@ -1963,13 +1958,17 @@ void S57Reader::AssembleSoundingGeometry( DDFRecord * poFRecord,
     if( poField == NULL )
         poField = poSRecord->FindField( "SG3D" );
     if( poField == NULL )
+    {
+        delete poMP;
         return;
+    }
 
     poXCOO = poField->GetFieldDefn()->FindSubfieldDefn( "XCOO" );
     poYCOO = poField->GetFieldDefn()->FindSubfieldDefn( "YCOO" );
     if( poXCOO == NULL || poYCOO == NULL )
     {
         CPLDebug( "S57", "XCOO or YCOO are NULL" );
+        delete poMP;
         return;
     }
     poVE3D = poField->GetFieldDefn()->FindSubfieldDefn( "VE3D" );
@@ -1993,7 +1992,7 @@ void S57Reader::AssembleSoundingGeometry( DDFRecord * poFRecord,
                                       &nBytesConsumed ) / (double) nCOMF;
         nBytesLeft -= nBytesConsumed;
         pachData += nBytesConsumed;
-        
+
         if( poVE3D != NULL )
         {
             dfZ = poYCOO->ExtractIntData( pachData, nBytesLeft,

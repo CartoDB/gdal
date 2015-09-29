@@ -3,8 +3,8 @@
  *
  * Project:  CPL - Common Portability Library
  * Author:   Frank Warmerdam, warmerdam@pobox.com
- * Purpose:  Include file providing low level portability services for CPL.  
- *           This should be the first include file for any CPL based code.  
+ * Purpose:  Include file providing low level portability services for CPL.
+ *           This should be the first include file for any CPL based code.
  *
  ******************************************************************************
  * Copyright (c) 1998, 2005, Frank Warmerdam <warmerdam@pobox.com>
@@ -38,14 +38,6 @@
  * Core portability definitions for CPL.
  *
  */
-
-/* ==================================================================== */
-/*      We will use macos_pre10 to indicate compilation with MacOS      */
-/*      versions before MacOS X.                                        */
-/* ==================================================================== */
-#ifdef macintosh
-#  define macos_pre10
-#endif
 
 /* ==================================================================== */
 /*      We will use WIN32 as a standard windows define.                 */
@@ -346,7 +338,8 @@ typedef int              GPtrDiff_t;
 #endif
 
 #ifndef M_PI
-# define M_PI		3.14159265358979323846	/* pi */
+# define M_PI		3.14159265358979323846
+/* 3.1415926535897932384626433832795 */
 #endif
 
 /* -------------------------------------------------------------------- */
@@ -390,12 +383,6 @@ CPL_C_END
 #  endif
 #  define EQUALN(a,b,n)           (STRNCASECMP(a,b,n)==0)
 #  define EQUAL(a,b)              (STRCASECMP(a,b)==0)
-#endif
-
-#ifdef macos_pre10
-int strcasecmp(char * str1, char * str2);
-int strncasecmp(char * str1, char * str2, int len);
-char * strdup (char *instr);
 #endif
 
 #ifndef CPL_THREADLOCAL
