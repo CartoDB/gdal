@@ -1,3 +1,10 @@
+ogr2ogr2 (2.1.0+svn.30757-precise1) precise; urgency=medium
+
+  * Pick changes from upstream at r30757
+  * Allow for parallel builds of debian package
+
+ --  <developer@cartodbv3>  Tue, 29 Sep 2015 13:10:35 +0000
+
 ogr2ogr2 (2.1.0+svn.29639-precise1) precise; urgency=medium
 
   * drv_csv: X_POSSIBLE_NAMES and other open options
