@@ -1,4 +1,4 @@
-gdal2.1 (2.1.0+svn.30757-precise1) precise; urgency=medium
+gdal (2.1.0+svn.30757-precise1) precise; urgency=medium
 
   * Initial release, changes from upstream at r30757
   * Allow for parallel builds of debian package
