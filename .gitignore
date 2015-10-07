@@ -11,3 +11,6 @@ gdal/debian/ogr2ogr2-static-bin.debhelper.log
 gdal/debian/ogr2ogr2-static-bin.substvars
 gdal/debian/ogr2ogr2-static-bin/
 gdal/debian/tmp/
+gdal/debian/gdal2.1-static-bin/
+gdal/debian/gdal2.1-static-bin.debhelper.log
+gdal/debian/gdal2.1-static-bin.substvars

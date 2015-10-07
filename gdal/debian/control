@@ -1,4 +1,4 @@
-Source: ogr2ogr2
+Source: gdal2.1
 Section: science
 Priority: extra
 Maintainer: Debian GIS Project <pkg-grass-devel@lists.alioth.debian.org>
@@ -21,7 +21,7 @@ Homepage: http://www.gdal.org/
 Vcs-Browser: http://git.debian.org/?p=pkg-grass/gdal.git
 Vcs-Git: git://git.debian.org/git/pkg-grass/gdal.git
 
-Package: ogr2ogr2-static-bin
+Package: gdal2.1-static-bin
 Section: science
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
@@ -43,6 +43,6 @@ Description: Geospatial Data Abstraction Library - Utility programs
  OGR library supports popular vector formats like ESRI Shapefile,
  TIGER data, S57, MapInfo File, DGN, GML and more.
  .
- This package contains the utility program, based on GDAL/OGR library,
- named ogr2ogr2.
+ This package contains the utility programs, based on GDAL/OGR library,
+ named ogr2ogr2.1 and ogrinfo2.1.
 
