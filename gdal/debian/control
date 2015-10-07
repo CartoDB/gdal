@@ -1,4 +1,4 @@
-Source: gdal2.1
+Source: gdal
 Section: science
 Priority: extra
 Maintainer: Debian GIS Project <pkg-grass-devel@lists.alioth.debian.org>
