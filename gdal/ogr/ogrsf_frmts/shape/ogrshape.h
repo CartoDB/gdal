@@ -29,8 +29,8 @@
  * DEALINGS IN THE SOFTWARE.
  ****************************************************************************/
 
-#ifndef _OGRSHAPE_H_INCLUDED
-#define _OGRSHAPE_H_INCLUDED
+#ifndef OGRSHAPE_H_INCLUDED
+#define OGRSHAPE_H_INCLUDED
 
 #include "ogrsf_frmts.h"
 #include "shapefil.h"
@@ -39,7 +39,7 @@
 #include <vector>
 
 /* Was limited to 255 until OGR 1.10, but 254 seems to be a more */
-/* conventionnal limit (http://en.wikipedia.org/wiki/Shapefile, */
+/* conventional limit (http://en.wikipedia.org/wiki/Shapefile, */
 /* http://www.clicketyclick.dk/databases/xbase/format/data_types.html, */
 /* #5052 ) */
 #define OGR_DBF_MAX_FIELD_WIDTH 254
@@ -48,7 +48,7 @@
 /*      Functions from Shape2ogr.cpp.                                   */
 /* ==================================================================== */
 OGRFeature *SHPReadOGRFeature( SHPHandle hSHP, DBFHandle hDBF,
-                               OGRFeatureDefn * poDefn, int iShape, 
+                               OGRFeatureDefn * poDefn, int iShape,
                                SHPObject *psShape, const char *pszSHPEncoding );
 OGRGeometry *SHPReadOGRObject( SHPHandle hSHP, int iShape, SHPObject *psShape );
 OGRFeatureDefn *SHPReadOGRFeatureDefn( const char * pszName,
@@ -65,7 +65,7 @@ OGRErr SHPWriteOGRFeature( SHPHandle hSHP, DBFHandle hDBF,
 /*                         OGRShapeGeomFieldDefn                        */
 /************************************************************************/
 
-class OGRShapeGeomFieldDefn: public OGRGeomFieldDefn
+class OGRShapeGeomFieldDefn CPL_FINAL: public OGRGeomFieldDefn
 {
     char* pszFullName;
     int   bSRSSet;
@@ -94,7 +94,7 @@ class OGRShapeGeomFieldDefn: public OGRGeomFieldDefn
 
 class OGRShapeDataSource;
 
-class OGRShapeLayer : public OGRAbstractProxiedLayer
+class OGRShapeLayer CPL_FINAL: public OGRAbstractProxiedLayer
 {
     OGRShapeDataSource  *poDS;
 
@@ -150,7 +150,7 @@ class OGRShapeLayer : public OGRAbstractProxiedLayer
     int                 bResizeAtClose;
 
     void                TruncateDBF();
-    
+
     int                 bCreateSpatialIndexAtClose;
     int                 bRewindOnWrite;
 
@@ -195,7 +195,7 @@ class OGRShapeLayer : public OGRAbstractProxiedLayer
     OGRErr              DeleteFeature( GIntBig nFID );
     OGRErr              ICreateFeature( OGRFeature *poFeature );
     OGRErr              SyncToDisk();
-    
+
     OGRFeatureDefn *    GetLayerDefn() { return poFeatureDefn; }
 
     GIntBig             GetFeatureCount( int );
@@ -215,7 +215,7 @@ class OGRShapeLayer : public OGRAbstractProxiedLayer
                 { OGRLayer::SetSpatialFilter(iGeomField, poGeom); }
 
     virtual OGRErr      SetAttributeFilter( const char * );
-    
+
     void                AddToFileList( CPLStringList& oFileList );
     void                CreateSpatialIndexAtClose( int bFlag ) { bCreateSpatialIndexAtClose = bFlag; }
     void                SetModificationDate(const char* pszStr);
@@ -225,11 +225,11 @@ class OGRShapeLayer : public OGRAbstractProxiedLayer
 /*                          OGRShapeDataSource                          */
 /************************************************************************/
 
-class OGRShapeDataSource : public OGRDataSource
+class OGRShapeDataSource CPL_FINAL: public OGRDataSource
 {
     OGRShapeLayer     **papoLayers;
     int                 nLayers;
-    
+
     char                *pszName;
 
     int                 bDSUpdate;
@@ -241,9 +241,9 @@ class OGRShapeDataSource : public OGRDataSource
     void                AddLayer(OGRShapeLayer* poLayer);
 
     std::vector<CPLString> oVectorLayerName;
-    
+
     int                 b2GBLimit;
-    
+
     char              **papszOpenOptions;
 
   public:
@@ -262,7 +262,7 @@ class OGRShapeDataSource : public OGRDataSource
     virtual OGRLayer    *GetLayer( int );
     virtual OGRLayer    *GetLayerByName(const char *);
 
-    virtual OGRLayer    *ICreateLayer( const char *, 
+    virtual OGRLayer    *ICreateLayer( const char *,
                                       OGRSpatialReference * = NULL,
                                       OGRwkbGeometryType = wkbUnknown,
                                       char ** = NULL );
@@ -284,4 +284,4 @@ class OGRShapeDataSource : public OGRDataSource
     char               **GetOpenOptions() { return papszOpenOptions; }
 };
 
-#endif /* ndef _OGRSHAPE_H_INCLUDED */
+#endif /* ndef OGRSHAPE_H_INCLUDED */

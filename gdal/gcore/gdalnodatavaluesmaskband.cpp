@@ -2,7 +2,7 @@
  * $Id$
  *
  * Project:  GDAL Core
- * Purpose:  Implementation of GDALNoDataValuesMaskBand, a class implementing 
+ * Purpose:  Implementation of GDALNoDataValuesMaskBand, a class implementing
  *           a default band mask based on the NODATA_VALUES metadata item.
  *           A pixel is considered nodata in all bands if and only if all bands
  *           match the corresponding value in the NODATA_VALUES tuple
@@ -38,22 +38,22 @@ CPL_CVSID("$Id$");
 /*                   GDALNoDataValuesMaskBand()                         */
 /************************************************************************/
 
-GDALNoDataValuesMaskBand::GDALNoDataValuesMaskBand( GDALDataset* poDS )
+GDALNoDataValuesMaskBand::GDALNoDataValuesMaskBand( GDALDataset* poDSIn )
 
 {
-    const char* pszNoDataValues = poDS->GetMetadataItem("NODATA_VALUES");
+    const char* pszNoDataValues = poDSIn->GetMetadataItem("NODATA_VALUES");
     char** papszNoDataValues = CSLTokenizeStringComplex(pszNoDataValues, " ", FALSE, FALSE);
 
     int i;
-    padfNodataValues = (double*)CPLMalloc(sizeof(double) * poDS->GetRasterCount());
-    for(i=0;i<poDS->GetRasterCount();i++)
+    padfNodataValues = (double*)CPLMalloc(sizeof(double) * poDSIn->GetRasterCount());
+    for(i=0;i<poDSIn->GetRasterCount();i++)
     {
         padfNodataValues[i] = CPLAtof(papszNoDataValues[i]);
     }
 
     CSLDestroy(papszNoDataValues);
 
-    this->poDS = poDS;
+    poDS = poDSIn;
     nBand = 0;
 
     nRasterXSize = poDS->GetRasterXSize();
@@ -83,11 +83,11 @@ CPLErr GDALNoDataValuesMaskBand::IReadBlock( int nXBlockOff, int nYBlockOff,
 {
     int iBand;
     GDALDataType eWrkDT;
-  
+
 /* -------------------------------------------------------------------- */
 /*      Decide on a working type.                                       */
 /* -------------------------------------------------------------------- */
-    switch( poDS->GetRasterBand(1)->GetRasterDataType() ) 
+    switch( poDS->GetRasterBand(1)->GetRasterDataType() )
     {
       case GDT_Byte:
         eWrkDT = GDT_Byte;
@@ -109,12 +109,12 @@ CPLErr GDALNoDataValuesMaskBand::IReadBlock( int nXBlockOff, int nYBlockOff,
       case GDT_CFloat32:
         eWrkDT = GDT_Float32;
         break;
-    
+
       case GDT_Float64:
       case GDT_CFloat64:
         eWrkDT = GDT_Float64;
         break;
-    
+
       default:
         CPLAssert( FALSE );
         eWrkDT = GDT_Float64;
@@ -128,11 +128,9 @@ CPLErr GDALNoDataValuesMaskBand::IReadBlock( int nXBlockOff, int nYBlockOff,
     CPLErr eErr;
 
     int nBands = poDS->GetRasterCount();
-    pabySrc = (GByte *) VSIMalloc3( nBands * GDALGetDataTypeSize(eWrkDT)/8, nBlockXSize, nBlockYSize );
+    pabySrc = (GByte *) VSI_MALLOC3_VERBOSE( nBands * GDALGetDataTypeSize(eWrkDT)/8, nBlockXSize, nBlockYSize );
     if (pabySrc == NULL)
     {
-        CPLError( CE_Failure, CPLE_OutOfMemory,
-                  "GDALNoDataValuesMaskBand::IReadBlock: Out of memory for buffer." );
         return CE_Failure;
     }
 

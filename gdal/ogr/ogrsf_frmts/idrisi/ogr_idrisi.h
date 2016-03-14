@@ -27,8 +27,8 @@
  * DEALINGS IN THE SOFTWARE.
  ****************************************************************************/
 
-#ifndef _OGR_IDRISI_H_INCLUDED
-#define _OGR_IDRISI_H_INCLUDED
+#ifndef OGR_IDRISI_H_INCLUDED
+#define OGR_IDRISI_H_INCLUDED
 
 #include "ogrsf_frmts.h"
 
@@ -45,11 +45,11 @@ protected:
 
     VSILFILE*          fp;
     VSILFILE*          fpAVL;
-    int                bEOF;
+    bool               bEOF;
 
     int                nNextFID;
 
-    int                bExtentValid;
+    bool               bExtentValid;
     double             dfMinX;
     double             dfMinY;
     double             dfMaxX;
@@ -124,4 +124,4 @@ class OGRIdrisiDriver : public OGRSFDriver
 };
 
 
-#endif /* ndef _OGR_IDRISI_H_INCLUDED */
+#endif /* ndef OGR_IDRISI_H_INCLUDED */

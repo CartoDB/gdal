@@ -208,7 +208,7 @@ def hdf5_7():
         try:
             metadata.pop(key)
         except KeyError:
-            gdaltest.post_reason( 'unable to fing "%s" key' % key )
+            gdaltest.post_reason( 'unable to find "%s" key' % key )
             return 'fail'
     return 'success'
 
@@ -396,7 +396,7 @@ def hdf5_11():
             print(got_gt)
             gdaltest.post_reason('fail')
             return 'fail'
-            
+
     ds = None
 
     if gdaltest.is_file_open('data/CSK_GEC.h5'):
@@ -454,10 +454,9 @@ class TestHDF5:
 
         if ds.GetRasterBand(1).Checksum() != self.checksum:
             gdaltest.post_reason('Bad checksum. Expected %d, got %d' % (self.checksum, ds.GetRasterBand(1).Checksum()))
-            return 'failure'
+            return 'fail'
 
         return 'success'
-
 
 
 gdaltest_list = [
@@ -495,4 +494,3 @@ if __name__ == '__main__':
     gdaltest.run_tests( gdaltest_list )
 
     gdaltest.summarize()
-

@@ -35,6 +35,7 @@
 #include <limits.h>
 #include <assert.h>
 
+#include "gdal_frmts.h"
 #include "gdal_pam.h"
 
 #ifndef DBL_MAX
@@ -62,10 +63,6 @@
 #endif /* SHRT_MAX */
 
 CPL_CVSID("$Id$");
-
-CPL_C_START
-void	GDALRegister_GSBG(void);
-CPL_C_END
 
 /************************************************************************/
 /* ==================================================================== */
@@ -156,7 +153,7 @@ class GSBGRasterBand : public GDALPamRasterBand
 /*                           GSBGRasterBand()                           */
 /************************************************************************/
 
-GSBGRasterBand::GSBGRasterBand( GSBGDataset *poDS, int nBand ) :
+GSBGRasterBand::GSBGRasterBand( GSBGDataset *poDSIn, int nBandIn ) :
     dfMinX(0.0),
     dfMaxX(0.0),
     dfMinY(0.0),
@@ -168,8 +165,8 @@ GSBGRasterBand::GSBGRasterBand( GSBGDataset *poDS, int nBand ) :
     nMinZRow(-1),
     nMaxZRow(-1)
 {
-    this->poDS = poDS;
-    this->nBand = nBand;
+    this->poDS = poDSIn;
+    this->nBand = nBandIn;
 
     eDataType = GDT_Float32;
 
@@ -197,12 +194,10 @@ GSBGRasterBand::~GSBGRasterBand( )
 CPLErr GSBGRasterBand::ScanForMinMaxZ()
 
 {
-    float *pafRowVals = (float *)VSIMalloc2( nRasterXSize, 4 );
+    float *pafRowVals = (float *)VSI_MALLOC2_VERBOSE( nRasterXSize, 4 );
 
     if( pafRowVals == NULL )
     {
-	CPLError( CE_Failure, CPLE_OutOfMemory,
-		  "Unable to allocate row buffer to scan grid file.\n" );
 	return CE_Failure;
     }
 
@@ -289,10 +284,10 @@ CPLErr GSBGRasterBand::IReadBlock( int nBlockXOff, int nBlockYOff,
     if( nBlockYOff < 0 || nBlockYOff > nRasterYSize - 1 || nBlockXOff != 0 )
 	return CE_Failure;
 
-    GSBGDataset *poGDS = dynamic_cast<GSBGDataset *>(poDS);
+    GSBGDataset *poGDS = reinterpret_cast<GSBGDataset *>(poDS);
     if( VSIFSeekL( poGDS->fp,
 		   GSBGDataset::nHEADER_SIZE +
-                        4 * nRasterXSize * (nRasterYSize - nBlockYOff - 1),
+                        4 * static_cast<vsi_l_offset>(nRasterXSize) * (nRasterYSize - nBlockYOff - 1),
 		   SEEK_SET ) != 0 )
     {
 	CPLError( CE_Failure, CPLE_FileIO,
@@ -342,21 +337,17 @@ CPLErr GSBGRasterBand::IWriteBlock( int nBlockXOff, int nBlockYOff,
     if( pafRowMinZ == NULL || pafRowMaxZ == NULL
 	|| nMinZRow < 0 || nMaxZRow < 0 )
     {
-	pafRowMinZ = (float *)VSIMalloc2( nRasterYSize,sizeof(float) );
+	pafRowMinZ = (float *)VSI_MALLOC2_VERBOSE( nRasterYSize,sizeof(float) );
 	if( pafRowMinZ == NULL )
 	{
-	    CPLError( CE_Failure, CPLE_OutOfMemory,
-		      "Unable to allocate space for row minimums array.\n" );
 	    return CE_Failure;
 	}
 
-	pafRowMaxZ = (float *)VSIMalloc2( nRasterYSize,sizeof(float) );
+	pafRowMaxZ = (float *)VSI_MALLOC2_VERBOSE( nRasterYSize,sizeof(float) );
 	if( pafRowMaxZ == NULL )
 	{
 	    VSIFree( pafRowMinZ );
 	    pafRowMinZ = NULL;
-	    CPLError( CE_Failure, CPLE_OutOfMemory,
-		      "Unable to allocate space for row maximums array.\n" );
 	    return CE_Failure;
 	}
 
@@ -530,7 +521,7 @@ int GSBGDataset::Identify( GDALOpenInfo * poOpenInfo )
 {
     /* Check for signature */
     if( poOpenInfo->nHeaderBytes < 4
-        || !EQUALN((const char *) poOpenInfo->pabyHeader,"DSBB",4) )
+        || !STARTS_WITH_CI((const char *) poOpenInfo->pabyHeader, "DSBB") )
     {
         return FALSE;
     }
@@ -572,7 +563,7 @@ GDALDataset *GSBGDataset::Open( GDALOpenInfo * poOpenInfo )
                   poOpenInfo->pszFilename );
         return NULL;
     }
- 
+
 /* -------------------------------------------------------------------- */
 /*      Read the header.                                                */
 /* -------------------------------------------------------------------- */
@@ -939,7 +930,7 @@ GDALDataset *GSBGDataset::Create( const char * pszFilename,
                   pszFilename );
         return NULL;
     }
-    
+
     CPLErr eErr = WriteHeader( fp, (GInt16) nXSize, (GInt16) nYSize,
 			       0.0, nXSize, 0.0, nYSize, 0.0, 0.0 );
     if( eErr != CE_None )
@@ -1056,12 +1047,10 @@ GDALDataset *GSBGDataset::CreateCopy( const char *pszFilename,
 /* -------------------------------------------------------------------- */
 /*      Copy band data.							*/
 /* -------------------------------------------------------------------- */
-    float *pfData = (float *)VSIMalloc2( nXSize, sizeof( float ) );
+    float *pfData = (float *)VSI_MALLOC2_VERBOSE( nXSize, sizeof( float ) );
     if( pfData == NULL )
     {
 	VSIFCloseL( fp );
-	CPLError( CE_Failure, CPLE_OutOfMemory,
-		  "Unable to create copy, unable to allocate line buffer.\n" );
 	return NULL;
     }
 
@@ -1144,34 +1133,31 @@ GDALDataset *GSBGDataset::CreateCopy( const char *pszFilename,
 }
 
 /************************************************************************/
-/*                          GDALRegister_GSBG()                          */
+/*                          GDALRegister_GSBG()                         */
 /************************************************************************/
 
 void GDALRegister_GSBG()
 
 {
-    GDALDriver	*poDriver;
+    if( GDALGetDriverByName( "GSBG" ) != NULL )
+        return;
 
-    if( GDALGetDriverByName( "GSBG" ) == NULL )
-    {
-        poDriver = new GDALDriver();
-        
-        poDriver->SetDescription( "GSBG" );
-        poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
-        poDriver->SetMetadataItem( GDAL_DMD_LONGNAME, 
-                                   "Golden Software Binary Grid (.grd)" );
-        poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC, 
-                                   "frmt_various.html#GSBG" );
-        poDriver->SetMetadataItem( GDAL_DMD_EXTENSION, "grd" );
-	poDriver->SetMetadataItem( GDAL_DMD_CREATIONDATATYPES,
-				   "Byte Int16 UInt16 Float32" );
-        poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
+    GDALDriver *poDriver = new GDALDriver();
 
-        poDriver->pfnIdentify = GSBGDataset::Identify;
-        poDriver->pfnOpen = GSBGDataset::Open;
-	poDriver->pfnCreate = GSBGDataset::Create;
-	poDriver->pfnCreateCopy = GSBGDataset::CreateCopy;
+    poDriver->SetDescription( "GSBG" );
+    poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
+    poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
+                               "Golden Software Binary Grid (.grd)" );
+    poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC, "frmt_various.html#GSBG" );
+    poDriver->SetMetadataItem( GDAL_DMD_EXTENSION, "grd" );
+    poDriver->SetMetadataItem( GDAL_DMD_CREATIONDATATYPES,
+                               "Byte Int16 UInt16 Float32" );
+    poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
 
-        GetGDALDriverManager()->RegisterDriver( poDriver );
-    }
+    poDriver->pfnIdentify = GSBGDataset::Identify;
+    poDriver->pfnOpen = GSBGDataset::Open;
+    poDriver->pfnCreate = GSBGDataset::Create;
+    poDriver->pfnCreateCopy = GSBGDataset::CreateCopy;
+
+    GetGDALDriverManager()->RegisterDriver( poDriver );
 }

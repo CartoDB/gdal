@@ -13,7 +13,7 @@ ifeq ($(HAVE_LIBTOOL),yes)
 LIBTOOL_COMPILE_CC =	$(LIBTOOL) --mode=compile --tag=CC
 LIBTOOL_COMPILE_CXX =	$(LIBTOOL) --mode=compile --tag=CXX
 LIBTOOL_LINK	=	$(LIBTOOL) --mode=link
-LIBTOOL_INSTALL	=	$(LIBTOOL) --mode=install 
+LIBTOOL_INSTALL	=	$(LIBTOOL) --mode=install
 LIBTOOL_FINISH	=	$(LIBTOOL) --mode=finish --silent
 LIBTOOL_CLEAN	=	$(LIBTOOL) --mode=clean
 OBJ_EXT = lo
@@ -71,15 +71,36 @@ INST_HTML	=	$(HOME)/www/gdal
 CPPFLAGS	= @CPPFLAGS@ -I$(GDAL_ROOT)/port @EXTRA_INCLUDES@ -DGDAL_COMPILATION
 CFLAGS		= @CFLAGS@ @C_WFLAGS@ $(USER_DEFS)
 CXXFLAGS	= @CXXFLAGS@ @CXX_WFLAGS@ $(USER_DEFS)
+CFLAGS_NOFTRAPV          = @CFLAGS_NOFTRAPV@ @C_WFLAGS@ $(USER_DEFS)
+CXXFLAGS_NOFTRAPV        = @CXXFLAGS_NOFTRAPV@ @CXX_WFLAGS@ $(USER_DEFS)
+CFLAGS_NO_LTO_IF_AVX_NONDEFAULT             = @CFLAGS_NO_LTO_IF_AVX_NONDEFAULT@ @C_WFLAGS@ $(USER_DEFS)
+CXXFLAGS_NO_LTO_IF_AVX_NONDEFAULT           = @CXXFLAGS_NO_LTO_IF_AVX_NONDEFAULT@ @CXX_WFLAGS@ $(USER_DEFS)
+
+NO_UNUSED_PARAMETER_FLAG = @NO_UNUSED_PARAMETER_FLAG@
+NO_SIGN_COMPARE = @NO_SIGN_COMPARE@
+NO_NON_VIRTUAL_DTOR_FLAG = @NO_NON_VIRTUAL_DTOR_FLAG@
+NO_LOGICAL_OP_FLAG = @NO_LOGICAL_OP_FLAG@
+
+# Also available -DAFL_FRIENDLY for strcmp(), etc.. variants that will
+# work better with American Fuzzy Lop branch examination logic
 
 # TODO(schwehr): Make these be configure flags.
+# CFLAGS += -Werror
 # CFLAGS += -std=c11
+# CFLAGS += -fsanitize=address
+# CFLAGS += -D_FORTIFY_SOURCE=2
+# CFLAGS += -fPIE -pie
+# CFLAGS += -fstack-protector-all
 
-# CXXFLAGS += -Wextra
 # CXXFLAGS += -Werror
 # CXXFLAGS += -std=c++11
+# CXXFLAGS += -fsanitize=address
+# CXXFLAGS += -D_FORTIFY_SOURCE=2
+# CXXFLAGS += -fPIE -pie
+# CXXFLAGS += -fstack-protector-all
 
 LDFLAGS     = @LDFLAGS@
+# LDFLAGS += -fsanitize=address
 
 RANLIB		=	@RANLIB@
 SO_EXT		=	@SO_EXT@
@@ -95,7 +116,7 @@ endif
 GDAL_INCLUDE	=	-I$(GDAL_ROOT)/port -I$(GDAL_ROOT)/gcore \
 			-I$(GDAL_ROOT)/alg \
                         -I$(GDAL_ROOT)/ogr -I$(GDAL_ROOT)/ogr/ogrsf_frmts \
-                        -I$(GDAL_ROOT)/gnm
+                        -I$(GDAL_ROOT)/gnm -I$(GDAL_ROOT)/apps
 
 # libtool targets and help variables
 LIBGDAL	:=		libgdal.la
@@ -155,13 +176,13 @@ endif
 # HDF5 Support.
 #
 HAVE_HDF5     = @HAVE_HDF5@
-HDF5_INCLUDE  = @HDF5_INCLUDE@ 
+HDF5_INCLUDE  = @HDF5_INCLUDE@
 
 #
 # KEA Support.
 #
 HAVE_KEA     = @HAVE_KEA@
-KEA_INC      = @KEA_INC@ 
+KEA_INC      = @KEA_INC@
 KEA_LIB      = @KEA_LIB@
 LIBS       +=   $(KEA_LIB)
 
@@ -183,12 +204,13 @@ HAVE_DODS = yes
 endif
 
 #
-# SQLite 
+# SQLite
 #
 SQLITE_INC = @SQLITE_INC@
 SQLITE_HAS_COLUMN_METADATA = @SQLITE_HAS_COLUMN_METADATA@
 HAVE_SQLITE = @HAVE_SQLITE@
 HAVE_SPATIALITE = @HAVE_SPATIALITE@
+SPATIALITE_SONAME = @SPATIALITE_SONAME@
 SPATIALITE_INC = @SPATIALITE_INC@
 SPATIALITE_AMALGAMATION = @SPATIALITE_AMALGAMATION@
 SPATIALITE_412_OR_LATER = @SPATIALITE_412_OR_LATER@
@@ -232,9 +254,9 @@ MRSID_LIBS	= @MRSID_LIBS@
 MRSID_LIDAR_INCLUDE	= @MRSID_LIDAR_INCLUDE@
 MRSID_LIDAR_LIBS	= @MRSID_LIDAR_LIBS@
 
-# 
+#
 # ECW Related
-# 
+#
 ECW_FLAGS	= @ECW_FLAGS@
 ECW_INCLUDE 	= @ECW_INCLUDE@
 ECW_LIBS	= @ECW_LIBS@
@@ -244,7 +266,7 @@ ECW_LIBS	= @ECW_LIBS@
 HAVE_XERCES	= @HAVE_XERCES@
 XERCES_INCLUDE	= @XERCES_INCLUDE@
 
-# 
+#
 # Enable NAS format
 #
 HAVE_NAS	= @HAVE_NAS@
@@ -283,28 +305,28 @@ GRASS_INCLUDE	=	@GRASS_INCLUDE@
 GRASS_GISBASE	=	@GRASS_GISBASE@
 HAVE_GRASS	=	@HAVE_GRASS@
 
-# 
+#
 # SDE
 #
 HAVE_SDE = @SDE_ENABLED@
 SDE_LIB	= @SDE_LIB@
 SDE_INC = @SDE_INC@
 
-# 
+#
 # FileGDB
 #
 HAVE_FGDB = @FGDB_ENABLED@
 FGDB_LIB = @FGDB_LIB@
 FGDB_INC = @FGDB_INC@
 
-# 
+#
 # MongoDB
 #
 HAVE_MONGODB = @MONGODB_ENABLED@
 MONGODB_LIB = @MONGODB_LIB@
 MONGODB_INC = @MONGODB_INC@
 
-# 
+#
 # ArcObjects
 #
 HAVE_ARCOBJECTS = @ARCOBJECTS_ENABLED@
@@ -324,7 +346,7 @@ CURL_INC	=	@CURL_INC@
 LIBJSONC_SETTING = @LIBJSONC_SETTING@
 JSON_INCLUDE = @JSON_INCLUDE@
 
-# 
+#
 # OpenCL support
 #
 OPENCL_LIB	=	@OPENCL_LIB@
@@ -340,7 +362,7 @@ HAVE_SOSI = @SOSI_ENABLED@
 
 #
 # PCIDSK SDK
-# 
+#
 PCIDSK_SETTING  =       @PCIDSK_SETTING@
 PCIDSK_LIB	=	@PCIDSK_LIB@
 PCIDSK_INCLUDE	=	@PCIDSK_INCLUDE@
@@ -358,7 +380,7 @@ HAVE_LIBXML2 = @HAVE_LIBXML2@
 LIBXML2_INC = @LIBXML2_INC@
 LIBXML2_LIB = @LIBXML2_LIB@
 
-# 
+#
 # DWGdirect Library
 #
 DWGDIRECT =	@DWGDIRECT@
@@ -377,10 +399,10 @@ DWG_LIBS = $(DWG_LIBDIR)/DD_$(DWG_PLT)_ModelerGeometry.a \
 	$(DWG_LIBDIR)/DD_$(DWG_PLT)_Ge.a \
 	$(DWG_LIBDIR)/DD_$(DWG_PLT)_Root.a \
 	$(DWG_LIBDIR)/DD_$(DWG_PLT)_FT.a \
-	$(DWG_LIBDIR)/DD_$(DWG_PLT)_Alloc.a 
+	$(DWG_LIBDIR)/DD_$(DWG_PLT)_Alloc.a
 HAVE_DWGDIRECT = yes
 else
-DWG_LIBS =	
+DWG_LIBS =
 HAVE_DWGDIRECT = no
 endif
 
@@ -399,7 +421,7 @@ endif
 #
 ifeq (@X_FME_HOME@,)
 HAVE_FME        =       no
-FME_INCLUDE	=	
+FME_INCLUDE	=
 else
 HAVE_FME        =       yes
 FME_INCLUDE	=	-I@X_FME_HOME@/fmeobjects/cpp
@@ -532,19 +554,23 @@ HAVE_CRYPTOPP    =       @HAVE_CRYPTOPP@
 USE_ONLY_CRYPTODLL_ALG        =       @USE_ONLY_CRYPTODLL_ALG@
 
 #
-#	Note these codes have to exactly match the format directory names, 
+#	Note these codes have to exactly match the format directory names,
 #	and their uppercase form should be the format portion of the
-#	format registration entry point.  eg. gdb -> GDALRegister_GDB().
+#	format registration entry point.  eg. gdb -> GDALRegister_GTiff().
 #
-GDAL_FORMATS = 	gxf gtiff hfa aigrid aaigrid ceos ceos2 iso8211 xpm \
-		sdts raw dted mem jdem envisat elas fit vrt usgsdem l1b \
-		nitf bmp pcidsk airsar rs2 ilwis rmf leveller sgi srtmhgt \
-		idrisi gsg ingr ers jaxapalsar dimap gff cosar pds adrg \
-		coasp tsx terragen blx msgn til r northwood saga xyz hf2 \
-		kmlsuperoverlay ctg e00grid zmap ngsgeoid iris map cals\
-		safe\
-		@OPT_GDAL_FORMATS@
+GDAL_FORMATS :=
+GDAL_FORMATS += gxf gtiff hfa aigrid aaigrid ceos ceos2 iso8211 xpm
+GDAL_FORMATS += sdts raw dted mem jdem envisat elas fit vrt usgsdem l1b
+GDAL_FORMATS += nitf bmp airsar rs2 ilwis rmf leveller sgi srtmhgt
+GDAL_FORMATS += idrisi gsg ingr ers jaxapalsar dimap gff cosar pds adrg
+GDAL_FORMATS += coasp tsx terragen blx msgn til r northwood saga xyz hf2
+GDAL_FORMATS += kmlsuperoverlay ctg e00grid zmap ngsgeoid iris map cals
+GDAL_FORMATS += safe sentinel2
+GDAL_FORMATS += @OPT_GDAL_FORMATS@
 
+ifneq ($(PCIDSK_SETTING),no)
+GDAL_FORMATS += pcidsk
+endif
 
 ifneq ($(LIBZ_SETTING),no)
 GDAL_FORMATS := $(GDAL_FORMATS) rik ozi

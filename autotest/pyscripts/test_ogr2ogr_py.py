@@ -349,6 +349,7 @@ def test_ogr2ogr_py_10():
 # Test -lco
 
 def test_ogr2ogr_py_11():
+    
     script_path = test_py_scripts.get_py_script('ogr2ogr')
     if script_path is None:
         return 'skip'
@@ -374,6 +375,7 @@ def test_ogr2ogr_py_11():
 # Test -nlt
 
 def test_ogr2ogr_py_12():
+
     script_path = test_py_scripts.get_py_script('ogr2ogr')
     if script_path is None:
         return 'skip'
@@ -673,7 +675,7 @@ def test_ogr2ogr_py_20():
                       '15' ]
 
     test_py_scripts.run_py_script(script_path, 'ogr2ogr', 'tmp ../utilities/data/Fields.csv')
-    
+
     ds = ogr.Open('tmp/Fields.dbf')
 
     if ds is None:
@@ -685,20 +687,20 @@ def test_ogr2ogr_py_20():
         ogr.GetDriverByName('ESRI Shapefile').DeleteDataSource('tmp/Fields.dbf')
         return 'fail'
 
-    error_occured = False
-    feat = ds.GetLayer(0).GetNextFeature()    
+    error_occurred = False
+    feat = ds.GetLayer(0).GetNextFeature()
     for i in range( layer_defn.GetFieldCount() ):
         if layer_defn.GetFieldDefn( i ).GetNameRef() != expected_fields[i]:
             print('Expected ', expected_fields[i],',but got',layer_defn.GetFieldDefn( i ).GetNameRef())
-            error_occured = True
+            error_occurred = True
         if feat.GetFieldAsString(i) != expected_data[i]:
             print('Expected the value ', expected_data[i],',but got',feat.GetFieldAsString(i))
-            error_occured = True
+            error_occurred = True
 
     ds.Destroy()
     ogr.GetDriverByName('ESRI Shapefile').DeleteDataSource('tmp/Fields.dbf')
 
-    if error_occured:
+    if error_occurred:
         return 'fail'
 
     return 'success'

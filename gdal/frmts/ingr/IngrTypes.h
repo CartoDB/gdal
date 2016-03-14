@@ -35,7 +35,7 @@
 #include "cpl_port.h"
 #include "gdal.h"
 #include "gdal_priv.h"
-#include "math.h"
+#include <cmath>
 
 CPL_C_START
 #include "tiffio.h"
@@ -84,10 +84,10 @@ typedef struct {
 
 typedef union 
 {
-    uint8   AsUint8;          
-    uint16  AsUint16;          
-    uint32  AsUint32;          
-    real32  AsReal32;          
+    uint8   AsUint8;
+    uint16  AsUint16;
+    uint32  AsUint32;
+    real32  AsReal32;
     real64  AsReal64;
 } INGR_MinMax;
 
@@ -124,11 +124,11 @@ typedef enum {
     AdaptiveGrayScale                = 29,    
     JPEGGRAY                         = 30,  // Gray Scale  
     JPEGRGB                          = 31,  // Full Color RGB  
-    JPEGCYMK                         = 32,  // CYMK  
+    JPEGCMYK                         = 32,  // CMYK  
     TiledRasterData                  = 65,  // See tile directory Data Type Code (DTC)
     NotUsedReserved                  = 66,   
-    ContinuousTone                   = 67,  // CYMK  
-    LineArt                          = 68   // CYMK/RGB  
+    ContinuousTone                   = 67,  // CMYK  
+    LineArt                          = 68   // CMYK/RGB  
 } INGR_Format;
 
 struct INGR_FormatDescription {
@@ -299,7 +299,7 @@ typedef    struct {
 } INGR_ColorTable256;
 
 //  ----------------------------------------------------------------------------
-//    Extra Block( s ) for dynamic allocated color table with intensit level entries
+//    Extra Block(s) for dynamic allocated color table with intensity level entries.
 //  ----------------------------------------------------------------------------
 
 typedef    struct {
@@ -416,7 +416,7 @@ typedef     struct {
 void   INGR_DGN2IEEEDouble(void * dbl);
 
 //  ------------------------------------------------------------------
-//    Compression, Data Format, Data Type related funtions
+//    Compression, Data Format, Data Type related functions
 //  ------------------------------------------------------------------
 
 uint32 CPL_STDCALL INGR_GetDataBlockSize( const char *pszFileName,
@@ -553,7 +553,7 @@ typedef     struct {
     memcpy( &ff, &bb[nn], ss);  \
     nn += ss;                   \
 }
-    
+
 #define STRC2BUF(bb, nn, ff)    \
 {                               \
     int ss = sizeof(ff);        \

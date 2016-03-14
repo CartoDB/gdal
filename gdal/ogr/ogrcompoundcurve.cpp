@@ -52,10 +52,10 @@ OGRCompoundCurve::OGRCompoundCurve()
 
 /**
  * \brief Copy constructor.
- * 
+ *
  * Note: before GDAL 2.1, only the default implementation of the constructor
  * existed, which could be unsafe to use.
- * 
+ *
  * @since GDAL 2.1
  */
 
@@ -80,10 +80,10 @@ OGRCompoundCurve::~OGRCompoundCurve()
 
 /**
  * \brief Assignment operator.
- * 
+ *
  * Note: before GDAL 2.1, only the default implementation of the operator
  * existed, which could be unsafe to use.
- * 
+ *
  * @since GDAL 2.1
  */
 
@@ -92,7 +92,7 @@ OGRCompoundCurve& OGRCompoundCurve::operator=( const OGRCompoundCurve& other )
     if( this != &other)
     {
         OGRCurve::operator=( other );
-        
+
         oCC = other.oCC;
     }
     return *this;
@@ -105,7 +105,11 @@ OGRCompoundCurve& OGRCompoundCurve::operator=( const OGRCompoundCurve& other )
 OGRwkbGeometryType OGRCompoundCurve::getGeometryType() const
 
 {
-    if( getCoordinateDimension() == 3 )
+    if( (flags & OGR_G_3D) && (flags & OGR_G_MEASURED) )
+        return wkbCompoundCurveZM;
+    else if( flags & OGR_G_MEASURED  )
+        return wkbCompoundCurveM;
+    else if( flags & OGR_G_3D )
         return wkbCompoundCurveZ;
     else
         return wkbCompoundCurve;
@@ -150,6 +154,7 @@ OGRErr OGRCompoundCurve::importFromWkb( unsigned char * pabyData,
 {
     OGRwkbByteOrder eByteOrder;
     int nDataOffset = 0;
+    /* coverity[tainted_data] */
     OGRErr eErr = oCC.importPreambuleFromWkb(this, pabyData, nSize, nDataOffset,
                                              eByteOrder, 9, eWkbVariant);
     if( eErr != OGRERR_NONE )
@@ -215,6 +220,7 @@ OGRGeometry *OGRCompoundCurve::clone() const
 
     poNewCC = new OGRCompoundCurve;
     poNewCC->assignSpatialReference( getSpatialReference() );
+    poNewCC->flags = flags;
 
     for( int i = 0; i < oCC.nCurveCount; i++ )
     {
@@ -263,7 +269,7 @@ OGRBoolean OGRCompoundCurve::IsEmpty() const
 /************************************************************************/
 /*                             get_Length()                             */
 /*                                                                      */
-/*      For now we return a simple euclidian 2D distance.               */
+/*      For now we return a simple euclidean 2D distance.               */
 /************************************************************************/
 
 double OGRCompoundCurve::get_Length() const
@@ -313,7 +319,7 @@ void OGRCompoundCurve::Value( double dfDistance, OGRPoint *poPoint ) const
         double dfSegLength = oCC.papoCurves[iGeom]->get_Length();
         if (dfSegLength > 0)
         {
-            if( (dfLength <= dfDistance) && ((dfLength + dfSegLength) >= 
+            if( (dfLength <= dfDistance) && ((dfLength + dfSegLength) >=
                                              dfDistance) )
             {
                 oCC.papoCurves[iGeom]->Value(dfDistance - dfLength, poPoint);
@@ -324,7 +330,7 @@ void OGRCompoundCurve::Value( double dfDistance, OGRPoint *poPoint ) const
             dfLength += dfSegLength;
         }
     }
-    
+
     EndPoint( poPoint );
 }
 
@@ -370,10 +376,10 @@ OGRBoolean  OGRCompoundCurve::Equals( OGRGeometry *poOther ) const
 {
     if( poOther == this )
         return TRUE;
-    
+
     if( poOther->getGeometryType() != getGeometryType() )
         return FALSE;
-    
+
     OGRCompoundCurve *poOCC = (OGRCompoundCurve *) poOther;
     return oCC.Equals(&(poOCC->oCC));
 }
@@ -385,6 +391,16 @@ OGRBoolean  OGRCompoundCurve::Equals( OGRGeometry *poOther ) const
 void OGRCompoundCurve::setCoordinateDimension( int nNewDimension )
 {
     oCC.setCoordinateDimension( this, nNewDimension );
+}
+
+void OGRCompoundCurve::set3D( OGRBoolean bIs3D )
+{
+    oCC.set3D(this, bIs3D);
+}
+
+void OGRCompoundCurve::setMeasured( OGRBoolean bIsMeasured )
+{
+    oCC.setMeasured(this, bIsMeasured);
 }
 
 /************************************************************************/
@@ -426,9 +442,9 @@ int          OGRCompoundCurve::getNumCurves() const
  * @return pointer to curve.  May be NULL.
  */
 
-OGRCurve    *OGRCompoundCurve::getCurve( int i )
+OGRCurve    *OGRCompoundCurve::getCurve( int iRing )
 {
-    return oCC.getCurve(i);
+    return oCC.getCurve(iRing);
 }
 
 /************************************************************************/
@@ -451,9 +467,9 @@ OGRCurve    *OGRCompoundCurve::getCurve( int i )
  * @return pointer to curve.  May be NULL.
  */
 
-const OGRCurve *OGRCompoundCurve::getCurve( int i ) const
+const OGRCurve *OGRCompoundCurve::getCurve( int iRing ) const
 {
-    return oCC.getCurve(i);
+    return oCC.getCurve(iRing);
 }
 
 /************************************************************************/
@@ -658,8 +674,8 @@ class OGRCompoundCurvePointIterator: public OGRPointIterator
         OGRPointIterator       *poCurveIter;
 
     public:
-        OGRCompoundCurvePointIterator(const OGRCompoundCurve* poCC) :
-                            poCC(poCC), iCurCurve(0), poCurveIter(NULL) {}
+        OGRCompoundCurvePointIterator(const OGRCompoundCurve* poCCIn) :
+                            poCC(poCCIn), iCurCurve(0), poCurveIter(NULL) {}
        ~OGRCompoundCurvePointIterator() { delete poCurveIter; }
 
         virtual OGRBoolean getNextPoint(OGRPoint* p);
@@ -737,7 +753,7 @@ OGRLineString* OGRCompoundCurve::CastToLineString(OGRCompoundCurve* poCC)
  *
  * The passed in geometry is consumed and a new one returned (or NULL in case
  * of failure)
- * 
+ *
  * @param poCC the input geometry - ownership is passed to the method.
  * @return new geometry.
  */

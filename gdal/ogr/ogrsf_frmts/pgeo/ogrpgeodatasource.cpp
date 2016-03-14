@@ -109,7 +109,7 @@ int OGRPGeoDataSource::Open( const char * pszNewName, int bUpdate,
     char *pszDSN;
     const char* pszOptionName = "";
     const char* pszDSNStringTemplate = NULL;
-    if( EQUALN(pszNewName,"PGEO:",5) )
+    if( STARTS_WITH_CI(pszNewName, "PGEO:") )
         pszDSN = CPLStrdup( pszNewName + 5 );
     else
     {
@@ -117,7 +117,6 @@ int OGRPGeoDataSource::Open( const char * pszNewName, int bUpdate,
         pszDSNStringTemplate = CPLGetConfigOption( pszOptionName, NULL );
         if( pszDSNStringTemplate == NULL )
         {
-            pszOptionName = "";
             pszDSNStringTemplate = "DRIVER=Microsoft Access Driver (*.mdb);DBQ=%s";
         }
         if (!CheckDSNStringTemplate(pszDSNStringTemplate))
@@ -127,7 +126,10 @@ int OGRPGeoDataSource::Open( const char * pszNewName, int bUpdate,
             return FALSE;
         }
         pszDSN = (char *) CPLMalloc(strlen(pszNewName)+strlen(pszDSNStringTemplate)+100);
-        sprintf( pszDSN, pszDSNStringTemplate,  pszNewName );
+        /* coverity[tainted_string] */
+        snprintf( pszDSN,
+                  strlen(pszNewName)+strlen(pszDSNStringTemplate)+100,
+                  pszDSNStringTemplate,  pszNewName );
     }
 
 /* -------------------------------------------------------------------- */
@@ -138,13 +140,15 @@ int OGRPGeoDataSource::Open( const char * pszNewName, int bUpdate,
     if( !oSession.EstablishSession( pszDSN, NULL, NULL ) )
     {
         int bError = TRUE;
-        if( !EQUALN(pszNewName,"PGEO:",5) )
+        if( !STARTS_WITH_CI(pszNewName, "PGEO:") )
         {
             // Trying with another template (#5594)
             pszDSNStringTemplate = "DRIVER=Microsoft Access Driver (*.mdb, *.accdb);DBQ=%s";
             CPLFree( pszDSN );
             pszDSN = (char *) CPLMalloc(strlen(pszNewName)+strlen(pszDSNStringTemplate)+100);
-            sprintf( pszDSN, pszDSNStringTemplate,  pszNewName );
+            snprintf( pszDSN,
+                     strlen(pszNewName)+strlen(pszDSNStringTemplate)+100,
+                     pszDSNStringTemplate,  pszNewName );
             CPLDebug( "PGeo", "EstablishSession(%s)", pszDSN );
             if( oSession.EstablishSession( pszDSN, NULL, NULL ) )
             {
@@ -153,7 +157,7 @@ int OGRPGeoDataSource::Open( const char * pszNewName, int bUpdate,
         }
         if( bError )
         {
-            CPLError( CE_Failure, CPLE_AppDefined, 
+            CPLError( CE_Failure, CPLE_AppDefined,
                     "Unable to initialize ODBC connection to DSN for %s,\n"
                     "%s", pszDSN, oSession.GetLastError() );
             CPLFree( pszDSN );
@@ -164,7 +168,7 @@ int OGRPGeoDataSource::Open( const char * pszNewName, int bUpdate,
     CPLFree( pszDSN );
 
     pszName = CPLStrdup( pszNewName );
-    
+
     bDSUpdate = bUpdate;
 
 /* -------------------------------------------------------------------- */
@@ -173,28 +177,28 @@ int OGRPGeoDataSource::Open( const char * pszNewName, int bUpdate,
 /* -------------------------------------------------------------------- */
     std::vector<char **> apapszGeomColumns;
     CPLODBCStatement oStmt( &oSession );
-        
+
     oStmt.Append( "SELECT TableName, FieldName, ShapeType, ExtentLeft, ExtentRight, ExtentBottom, ExtentTop, SRID, HasZ FROM GDB_GeomColumns" );
 
     if( !oStmt.ExecuteSQL() )
     {
-        CPLDebug( "PGEO", 
-                  "SELECT on GDB_GeomColumns fails, perhaps not a personal geodatabase?\n%s", 
+        CPLDebug( "PGEO",
+                  "SELECT on GDB_GeomColumns fails, perhaps not a personal geodatabase?\n%s",
                   oSession.GetLastError() );
         return FALSE;
     }
 
     while( oStmt.Fetch() )
     {
-        int i, iNew = apapszGeomColumns.size();
+        int i, iNew = static_cast<int>(apapszGeomColumns.size());
         char **papszRecord = NULL;
         for( i = 0; i < 9; i++ )
-            papszRecord = CSLAddString( papszRecord, 
+            papszRecord = CSLAddString( papszRecord,
                                         oStmt.GetColData(i) );
         apapszGeomColumns.resize(iNew+1);
         apapszGeomColumns[iNew] = papszRecord;
     }
-            
+
 /* -------------------------------------------------------------------- */
 /*      Create a layer for each spatial table.                          */
 /* -------------------------------------------------------------------- */
@@ -228,7 +232,7 @@ int OGRPGeoDataSource::Open( const char * pszNewName, int bUpdate,
 
         CSLDestroy( papszRecord );
     }
-    
+
     return TRUE;
 }
 
@@ -268,8 +272,8 @@ OGRLayer * OGRPGeoDataSource::ExecuteSQL( const char *pszSQLCommand,
 /*      Use generic implementation for recognized dialects              */
 /* -------------------------------------------------------------------- */
     if( IsGenericSQLDialect(pszDialect) )
-        return OGRDataSource::ExecuteSQL( pszSQLCommand, 
-                                          poSpatialFilter, 
+        return OGRDataSource::ExecuteSQL( pszSQLCommand,
+                                          poSpatialFilter,
                                           pszDialect );
 
 /* -------------------------------------------------------------------- */
@@ -280,8 +284,9 @@ OGRLayer * OGRPGeoDataSource::ExecuteSQL( const char *pszSQLCommand,
     poStmt->Append( pszSQLCommand );
     if( !poStmt->ExecuteSQL() )
     {
-        CPLError( CE_Failure, CPLE_AppDefined, 
+        CPLError( CE_Failure, CPLE_AppDefined,
                   "%s", oSession.GetLastError() );
+        delete poStmt;
         return NULL;
     }
 
@@ -300,12 +305,12 @@ OGRLayer * OGRPGeoDataSource::ExecuteSQL( const char *pszSQLCommand,
 /*      statement.                                                      */
 /* -------------------------------------------------------------------- */
     OGRPGeoSelectLayer *poLayer = NULL;
-        
+
     poLayer = new OGRPGeoSelectLayer( this, poStmt );
 
     if( poSpatialFilter != NULL )
         poLayer->SetSpatialFilter( poSpatialFilter );
-    
+
     return poLayer;
 }
 

@@ -51,7 +51,7 @@ GNMFileNetwork::~GNMFileNetwork()
 CPLErr GNMFileNetwork::Open(GDALOpenInfo *poOpenInfo)
 {
     m_soNetworkFullName = poOpenInfo->pszFilename;
-    char **papszFiles = CPLReadDir( m_soNetworkFullName );
+    char **papszFiles = VSIReadDir( m_soNetworkFullName );
     if( CSLCount(papszFiles) == 0 )
     {
         CPLError( CE_Failure, CPLE_OpenFailed, "Open '%s' file failed",
@@ -134,7 +134,7 @@ int GNMFileNetwork::CheckNetworkExist(const char *pszFilename, char **papszOptio
     // if path exist check if network already present and OVERWRITE option
     // else create the path
 
-    bool bOverwrite = CSLFetchBoolean(papszOptions, "OVERWRITE", FALSE);
+    bool bOverwrite = CPL_TO_BOOL(CSLFetchBoolean(papszOptions, "OVERWRITE", FALSE));
 
     if(m_soName.empty())
     {
@@ -153,7 +153,7 @@ int GNMFileNetwork::CheckNetworkExist(const char *pszFilename, char **papszOptio
 
     if (CPLCheckForFile((char*)m_soNetworkFullName.c_str(), NULL))
     {
-        char **papszFiles = CPLReadDir( m_soNetworkFullName );
+        char **papszFiles = VSIReadDir( m_soNetworkFullName );
         if( CSLCount(papszFiles) == 0 )
         {
             return FALSE;
@@ -206,7 +206,7 @@ CPLErr GNMFileNetwork::Delete()
        return eResult;
 
     // check if folder empty
-    char **papszFiles = CPLReadDir( m_soNetworkFullName );
+    char **papszFiles = VSIReadDir( m_soNetworkFullName );
     bool bIsEmpty = true;
     for(int i = 0; papszFiles[i] != NULL; ++i)
     {
@@ -266,8 +266,8 @@ CPLErr GNMFileNetwork::StoreNetworkSrs()
             VSIFCloseL(fpSrsPrj);
             return CE_Failure;
         }
+        VSIFCloseL(fpSrsPrj);
     }
-    VSIFCloseL(fpSrsPrj);
     return CE_None;
 }
 

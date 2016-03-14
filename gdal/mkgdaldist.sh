@@ -94,6 +94,7 @@ fi
 
 echo "* Cleaning .svn directories under $PWD..."
 find gdal -name .svn | xargs rm -rf
+rm -f gdal/.gitignore
 
 #
 # Generate man pages
@@ -138,8 +139,6 @@ cd ${CWD}
 # Make distribution packages
 #
 echo "* Making distribution packages..."
-rm -rf gdal/dist_docs
-
 rm -f gdal/VERSION
 echo $GDAL_VERSION > gdal/VERSION
 

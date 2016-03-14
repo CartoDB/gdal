@@ -133,11 +133,14 @@ GatherFeaturePoints(GDALDataset* poDataset, int* panBands,
 
     // Allocate memory for grayscale image
     double **padfImg = new double*[nHeight];
-    for (int i = 0; i < nHeight; ++i)
+    for (int i = 0; ;)
     {
         padfImg[i] = new double[nWidth];
         for (int j = 0; j < nWidth; ++j)
           padfImg[i][j] = 0.0;
+        ++i;
+        if( i == nHeight )
+            break;
     }
 
     // Create grayscale image
@@ -208,7 +211,7 @@ GDALComputeMatchingPoints( GDALDatasetH hFirstImage,
         anBandMap1[2] = 3;
     }
     else
-    { 
+    {
         anBandMap1[0] = anBandMap1[1] = anBandMap1[2] = 1;
     }
 
@@ -219,7 +222,7 @@ GDALComputeMatchingPoints( GDALDatasetH hFirstImage,
         anBandMap2[2] = 3;
     }
     else
-    { 
+    {
         anBandMap2[0] = anBandMap2[1] = anBandMap2[2] = 1;
     }
 
@@ -257,7 +260,7 @@ GDALComputeMatchingPoints( GDALDatasetH hFirstImage,
         return NULL;
     }
 
-    *pnGCPCount = oMatchPairs.size() / 2;
+    *pnGCPCount = static_cast<int>(oMatchPairs.size()) / 2;
 
 /* -------------------------------------------------------------------- */
 /*      Translate these into GCPs - but with the output coordinate      */
@@ -267,14 +270,14 @@ GDALComputeMatchingPoints( GDALDatasetH hFirstImage,
 
     GDALInitGCPs(*pnGCPCount, pasGCPList);
 
-    for (int i=0; i < *pnGCPCount; i++) 
+    for (int i=0; i < *pnGCPCount; i++)
     {
         GDALFeaturePoint *poPoint1 = oMatchPairs[i*2  ];
         GDALFeaturePoint *poPoint2 = oMatchPairs[i*2+1];
 
         pasGCPList[i].dfGCPPixel = poPoint1->GetX() + 0.5;
         pasGCPList[i].dfGCPLine = poPoint1->GetY() + 0.5;
-        
+
         pasGCPList[i].dfGCPX = poPoint2->GetX() + 0.5;
         pasGCPList[i].dfGCPY = poPoint2->GetY() + 0.5;
         pasGCPList[i].dfGCPZ = 0.0;
@@ -283,13 +286,13 @@ GDALComputeMatchingPoints( GDALDatasetH hFirstImage,
     // Cleanup the feature point lists.
     delete poFPCollection1;
     delete poFPCollection2;
-    
+
 /* -------------------------------------------------------------------- */
 /*      Optionally transform into the georef coordinates of the         */
 /*      output image.                                                   */
 /* -------------------------------------------------------------------- */
-    int bGeorefOutput = 
-        CSLTestBoolean(CSLFetchNameValueDef(papszOptions,"OUTPUT_GEOREF","NO"));
+    const bool bGeorefOutput =
+        CPLTestBool(CSLFetchNameValueDef(papszOptions,"OUTPUT_GEOREF","NO"));
 
     if( bGeorefOutput )
     {
@@ -297,9 +300,9 @@ GDALComputeMatchingPoints( GDALDatasetH hFirstImage,
 
         GDALGetGeoTransform( hSecondImage, adfGeoTransform );
 
-        for (int i=0; i < *pnGCPCount; i++) 
+        for (int i=0; i < *pnGCPCount; i++)
         {
-            GDALApplyGeoTransform(adfGeoTransform, 
+            GDALApplyGeoTransform(adfGeoTransform,
                                   pasGCPList[i].dfGCPX,
                                   pasGCPList[i].dfGCPY,
                                   &(pasGCPList[i].dfGCPX),

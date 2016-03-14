@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #******************************************************************************
 #  $Id$
-# 
+#
 # Project:  Google Summer of Code 2007, 2008 (http://code.google.com/soc/)
 # Support:  BRGM (http://www.brgm.fr)
 # Purpose:  Convert a raster into TMS (Tile Map Service) tiles in a directory.
@@ -17,17 +17,17 @@
 ###############################################################################
 # Copyright (c) 2008, Klokan Petr Pridal
 # Copyright (c) 2010-2013, Even Rouault <even dot rouault at mines-paris dot org>
-# 
+#
 #  Permission is hereby granted, free of charge, to any person obtaining a
 #  copy of this software and associated documentation files (the "Software"),
 #  to deal in the Software without restriction, including without limitation
 #  the rights to use, copy, modify, merge, publish, distribute, sublicense,
 #  and/or sell copies of the Software, and to permit persons to whom the
 #  Software is furnished to do so, subject to the following conditions:
-# 
+#
 #  The above copyright notice and this permission notice shall be included
 #  in all copies or substantial portions of the Software.
-# 
+#
 #  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
 #  OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
@@ -56,7 +56,7 @@ __version__ = "$Id$"
 
 resampling_list = ('average','near','bilinear','cubic','cubicspline','lanczos','antialias')
 profile_list = ('mercator','geodetic','raster') #,'zoomify')
-webviewer_list = ('all','google','openlayers','none')
+webviewer_list = ('all','google','openlayers','leaflet','none')
 
 # =============================================================================
 # =============================================================================
@@ -115,7 +115,7 @@ class GlobalMercator(object):
          LatLon      <->       Meters      <->     Pixels    <->       Tile     
 
      WGS84 coordinates   Spherical Mercator  Pixels in pyramid  Tiles in pyramid
-         lat/lon            XY in metres     XY pixels Z zoom      XYZ from TMS 
+         lat/lon            XY in meters     XY pixels Z zoom      XYZ from TMS 
         EPSG:4326           EPSG:387                                         
          .----.              ---------               --                TMS      
         /      \     <->     |       |     <->     /----/    <->      Google    
@@ -147,13 +147,13 @@ class GlobalMercator(object):
       Microsoft is referencing tiles by a QuadTree name, defined on the website:
       http://msdn2.microsoft.com/en-us/library/bb259689.aspx
 
-    The lat/lon coordinates are using WGS84 datum, yeh?
+    The lat/lon coordinates are using WGS84 datum, yes?
 
       Yes, all lat/lon we are mentioning should use WGS84 Geodetic Datum.
       Well, the web clients like Google Maps are projecting those coordinates by
       Spherical Mercator, so in fact lat/lon coordinates on sphere are treated as if
       the were on the WGS84 ellipsoid.
-     
+
       From MSDN documentation:
       To simplify the calculations, we use the spherical form of projection, not
       the ellipsoidal form. Since the projection is used only for map display,
@@ -411,7 +411,7 @@ class GlobalGeodetic(object):
         return (b[1],b[0],b[3],b[2])
 
 #---------------------
-# TODO: Finish Zoomify implemtentation!!!
+# TODO: Finish Zoomify implementation.
 class Zoomify(object):
     """
     Tiles compatible with the Zoomify viewer
@@ -497,6 +497,24 @@ class GDAL2Tiles(object):
         """Print progressbar for float value 0..1"""
 
         gdal.TermProgress_nocb(complete)
+
+    # -------------------------------------------------------------------------
+    def gettempfilename(self, suffix):
+        """Returns a temporary filename"""
+        if '_' in os.environ:
+            # tempfile.mktemp() crashes on some Wine versions (the one of Ubuntu 12.04 particularly)
+            if os.environ['_'].find('wine') >= 0:
+                tmpdir = '.'
+                if 'TMP' in os.environ:
+                    tmpdir = os.environ['TMP']
+                import time
+                import random
+                random.seed(time.time())
+                random_part = 'file%d' % random.randint(0,1000000000)
+                return os.path.join(tmpdir, random_part + suffix)
+
+        import tempfile
+        return tempfile.mktemp(suffix)
 
     # -------------------------------------------------------------------------
     def stop(self):
@@ -663,6 +681,9 @@ gdal_vrtmerge.py -o merged.vrt %s""" % " ".join(self.args))
         p.add_option("-v", "--verbose",
                           action="store_true", dest="verbose",
                           help="Print status messages to stdout")
+        p.add_option("-q", "--quiet",
+                          action="store_true", dest="quiet",
+                          help="Disable messages and status to stdout")
 
         # KML options 
         g = OptionGroup(p, "KML (Google Earth) options", "Options for generated Google Earth SuperOverlay metadata")
@@ -821,8 +842,7 @@ gdal2tiles temp.vrt""" % self.input )
 
                     # Correction of AutoCreateWarpedVRT for NODATA values
                     if self.in_nodata != []:
-                        import tempfile
-                        tempfilename = tempfile.mktemp('-gdal2tiles.vrt')
+                        tempfilename = self.gettempfilename('-gdal2tiles.vrt')
                         self.out_ds.GetDriver().CreateCopy(tempfilename, self.out_ds)
                         # open as a text file
                         s = open(tempfilename).read()
@@ -856,8 +876,7 @@ gdal2tiles temp.vrt""" % self.input )
                     # Correction of AutoCreateWarpedVRT for Mono (1 band) and RGB (3 bands) files without NODATA:
                     # equivalent of gdalwarp -dstalpha
                     if self.in_nodata == [] and self.out_ds.RasterCount in [1,3]:
-                        import tempfile
-                        tempfilename = tempfile.mktemp('-gdal2tiles.vrt')
+                        tempfilename = self.gettempfilename('-gdal2tiles.vrt')
                         self.out_ds.GetDriver().CreateCopy(tempfilename, self.out_ds)
                         # open as a text file
                         s = open(tempfilename).read()
@@ -925,13 +944,13 @@ gdal2tiles temp.vrt""" % self.input )
 
         # MAPTILER - COMMENTED
         #if self.out_gt[1] != (-1 * self.out_gt[5]) and self.options.profile != 'raster':
-            # TODO: Process corectly coordinates with are have swichted Y axis (display in OpenLayers too)
+            # TODO: Process correctly coordinates with are have switched Y axis (display in OpenLayers too)
             #self.error("Size of the pixel in the output differ for X and Y axes.")
 
         # Report error in case rotation/skew is in geotransform (possible only in 'raster' profile)
         if (self.out_gt[2], self.out_gt[4]) != (0,0):
             self.error("Georeference of the raster contains rotation or skew. Such raster is not supported. Please use gdalwarp first.")
-            # TODO: Do the warping in this case automaticaly
+            # TODO: Do the warping in this case automatically
 
         #
         # Here we expect: pixel is square, no rotation on the raster
@@ -1093,6 +1112,13 @@ gdal2tiles temp.vrt""" % self.input )
                     f.write( self.generate_openlayers() )
                     f.close()
 
+            # Generate leaflet.html
+            if self.options.webviewer in ('all','leaflet'):
+                if not self.options.resume or not os.path.exists(os.path.join(self.output, 'leaflet.html')):
+                    f = open(os.path.join(self.output, 'leaflet.html'), 'w')
+                    f.write( self.generate_leaflet() )
+                    f.close()
+
         elif self.options.profile == 'geodetic':
 
             west, south = self.ominx, self.ominy
@@ -1148,7 +1174,8 @@ gdal2tiles temp.vrt""" % self.input )
     def generate_base_tiles(self):
         """Generation of the base tiles (the lowest in the pyramid) directly from the input raster"""
 
-        print("Generating Base Tiles:")
+        if not self.options.quiet:
+            print("Generating Base Tiles:")
 
         if self.options.verbose:
             #mx, my = self.out_gt[0], self.out_gt[3] # OriginX, OriginY
@@ -1195,7 +1222,7 @@ gdal2tiles temp.vrt""" % self.input )
 
                 if self.options.resume and os.path.exists(tilefilename):
                     if self.options.verbose:
-                        print("Tile generation skiped because of --resume")
+                        print("Tile generation skipped because of --resume")
                     else:
                         self.progressbar( ti / float(tcount) )
                     continue
@@ -1301,14 +1328,15 @@ gdal2tiles temp.vrt""" % self.input )
                         f.write( self.generate_kml( tx, ty, tz ))
                         f.close()
 
-                if not self.options.verbose:
+                if not self.options.verbose and not self.options.quiet:
                     self.progressbar( ti / float(tcount) )
 
     # -------------------------------------------------------------------------
     def generate_overview_tiles(self):
         """Generation of the overview tiles (higher in the pyramid) based on existing tiles"""
 
-        print("Generating Overview Tiles:")
+        if not self.options.quiet:
+            print("Generating Overview Tiles:")
 
         tilebands = self.dataBandsCount + 1
 
@@ -1339,7 +1367,7 @@ gdal2tiles temp.vrt""" % self.input )
 
                     if self.options.resume and os.path.exists(tilefilename):
                         if self.options.verbose:
-                            print("Tile generation skiped because of --resume")
+                            print("Tile generation skipped because of --resume")
                         else:
                             self.progressbar( ti / float(tcount) )
                         continue
@@ -1395,7 +1423,7 @@ gdal2tiles temp.vrt""" % self.input )
                         f.write( self.generate_kml( tx, ty, tz, children ) )
                         f.close()
 
-                    if not self.options.verbose:
+                    if not self.options.verbose and not self.options.quiet:
                         self.progressbar( ti / float(tcount) )
 
 
@@ -1928,12 +1956,145 @@ gdal2tiles temp.vrt""" % self.input )
               </head>
               <body onload="load()">
                   <div id="header"><h1>%(title)s</h1></div>
-                  <div id="subheader">Generated by <a href="http://www.maptiler.org/">MapTiler</a>/<a href="http://www.klokan.cz/projects/gdal2tiles/">GDAL2Tiles</a>, Copyright &copy; 2008 <a href="http://www.klokan.cz/">Klokan Petr Pridal</a>,  <a href="http://www.gdal.org/">GDAL</a> &amp; <a href="http://www.osgeo.org/">OSGeo</a> <a href="http://code.google.com/soc/">GSoC</a>
+                  <div id="subheader">Generated by <a href="http://www.klokan.cz/projects/gdal2tiles/">GDAL2Tiles</a>, Copyright &copy; 2008 <a href="http://www.klokan.cz/">Klokan Petr Pridal</a>,  <a href="http://www.gdal.org/">GDAL</a> &amp; <a href="http://www.osgeo.org/">OSGeo</a> <a href="http://code.google.com/soc/">GSoC</a>
             <!-- PLEASE, LET THIS NOTE ABOUT AUTHOR AND PROJECT SOMEWHERE ON YOUR WEBSITE, OR AT LEAST IN THE COMMENT IN HTML. THANK YOU -->
                   </div>
                    <div id="map"></div>
               </body>
             </html>
+        """ % args
+
+        return s
+
+
+    # -------------------------------------------------------------------------
+    def generate_leaflet(self):
+        """
+        Template for leaflet.html implementing overlay of tiles for 'mercator' profile.
+        It returns filled string. Expected variables:
+        title, north, south, east, west, minzoom, maxzoom, tilesize, tileformat, publishurl
+        """
+
+        args = {}
+        args['title'] = self.options.title.replace('"', '\\"')
+        args['htmltitle'] = self.options.title
+        args['south'], args['west'], args['north'], args['east'] = self.swne
+        args['centerlon'] = (args['north'] + args['south']) / 2.
+        args['centerlat'] = (args['west'] + args['east']) / 2.
+        args['minzoom'] = self.tminz
+        args['maxzoom'] = self.tmaxz
+        args['beginzoom'] = self.tmaxz
+        args['tilesize'] = self.tilesize  # not used
+        args['tileformat'] = self.tileext
+        args['publishurl'] = self.options.url  # not used
+        args['copyright'] = self.options.copyright.replace('"', '\\"')
+        
+        s = """<!DOCTYPE html>
+        <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no' />
+            <title>%(htmltitle)s</title>
+
+            <!-- Leaflet -->
+            <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.5/leaflet.css" />
+            <script src="http://cdn.leafletjs.com/leaflet-0.7.5/leaflet.js"></script>
+
+            <style>
+                body { margin:0; padding:0; }
+                body, table, tr, td, th, div, h1, h2, input { font-family: "Calibri", "Trebuchet MS", "Ubuntu", Serif; font-size: 11pt; }
+                #map { position:absolute; top:0; bottom:0; width:100%%; } /* full size */
+                .ctl { 
+                    padding: 2px 10px 2px 10px;
+                    background: white;
+                    background: rgba(255,255,255,0.9);
+                    box-shadow: 0 0 15px rgba(0,0,0,0.2);
+                    border-radius: 5px;
+                    text-align: right;
+                }
+                .title {
+                    font-size: 18pt;
+                    font-weight: bold;
+                }
+                .src {
+                    font-size: 10pt;
+                }
+
+            </style>
+
+        </head>
+        <body>
+
+        <div id="map"></div>
+
+        <script>
+        /* **** Leaflet **** */
+
+        // Base layers
+        //  .. OpenStreetMap
+        var osm = L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'});
+
+        //  .. CartoDB Positron
+        var cartodb = L.tileLayer('http://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="http://cartodb.com/attributions">CartoDB</a>'});
+
+        //  .. OSM Toner
+        var toner = L.tileLayer('http://{s}.tile.stamen.com/toner/{z}/{x}/{y}.png', {attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, under <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>. Data by <a href="http://openstreetmap.org">OpenStreetMap</a>, under <a href="http://www.openstreetmap.org/copyright">ODbL</a>.'});
+
+        //  .. White background
+        var white = L.tileLayer("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEAAQMAAABmvDolAAAAA1BMVEX///+nxBvIAAAAH0lEQVQYGe3BAQ0AAADCIPunfg43YAAAAAAAAAAA5wIhAAAB9aK9BAAAAABJRU5ErkJggg==");
+
+        // Overlay layers (TMS)
+        var lyr = L.tileLayer('./{z}/{x}/{y}.%(tileformat)s', {tms: true, opacity: 0.7, attribution: "%(copyright)s"});
+
+        // Map
+        var map = L.map('map', {
+            center: [%(centerlon)s, %(centerlat)s],
+            zoom: %(beginzoom)s,
+            minZoom: %(minzoom)s,
+            maxZoom: %(maxzoom)s,
+            layers: [osm]
+        });
+
+        var basemaps = {"OpenStreetMap": osm, "CartoDB Positron": cartodb, "Stamen Toner": toner, "Without background": white}
+        var overlaymaps = {"Layer": lyr}
+
+        // Title
+        var title = L.control();
+        title.onAdd = function(map) {
+	        this._div = L.DomUtil.create('div', 'ctl title');
+	        this.update();
+	        return this._div;
+        };
+        title.update = function(props) {
+	        this._div.innerHTML = "%(title)s";
+        };
+        title.addTo(map);
+
+        // Note
+        var src = 'Generated by <a href="http://www.klokan.cz/projects/gdal2tiles/">GDAL2Tiles</a>, Copyright &copy; 2008 <a href="http://www.klokan.cz/">Klokan Petr Pridal</a>,  <a href="http://www.gdal.org/">GDAL</a> &amp; <a href="http://www.osgeo.org/">OSGeo</a> <a href="http://code.google.com/soc/">GSoC</a>';
+        var title = L.control({position: 'bottomleft'});
+        title.onAdd = function(map) {
+	        this._div = L.DomUtil.create('div', 'ctl src');
+	        this.update();
+	        return this._div;
+        };
+        title.update = function(props) {
+	        this._div.innerHTML = src;
+        };
+        title.addTo(map);
+
+
+        // Add base layers
+        L.control.layers(basemaps, overlaymaps, {collapsed: false}).addTo(map);
+
+        // Fit to overlay bounds (SW and NE points with (lat, lon))
+        map.fitBounds([[%(south)s, %(east)s], [%(north)s, %(west)s]]);
+
+        </script>
+
+        </body>
+        </html>
+
         """ % args
 
         return s
@@ -2251,7 +2412,7 @@ gdal2tiles temp.vrt""" % self.input )
               </head>
               <body onload="init()">
                 <div id="header"><h1>%(title)s</h1></div>
-                <div id="subheader">Generated by <a href="http://www.maptiler.org/">MapTiler</a>/<a href="http://www.klokan.cz/projects/gdal2tiles/">GDAL2Tiles</a>, Copyright &copy; 2008 <a href="http://www.klokan.cz/">Klokan Petr Pridal</a>,  <a href="http://www.gdal.org/">GDAL</a> &amp; <a href="http://www.osgeo.org/">OSGeo</a> <a href="http://code.google.com/soc/">GSoC</a>
+                <div id="subheader">Generated by <a href="http://www.klokan.cz/projects/gdal2tiles/">GDAL2Tiles</a>, Copyright &copy; 2008 <a href="http://www.klokan.cz/">Klokan Petr Pridal</a>,  <a href="http://www.gdal.org/">GDAL</a> &amp; <a href="http://www.osgeo.org/">OSGeo</a> <a href="http://code.google.com/soc/">GSoC</a>
                 <!-- PLEASE, LET THIS NOTE ABOUT AUTHOR AND PROJECT SOMEWHERE ON YOUR WEBSITE, OR AT LEAST IN THE COMMENT IN HTML. THANK YOU -->
                 </div>
                 <div id="map"></div>
@@ -2265,8 +2426,11 @@ gdal2tiles temp.vrt""" % self.input )
 # =============================================================================
 # =============================================================================
 
-if __name__=='__main__':
+def main():
     argv = gdal.GeneralCmdLineProcessor( sys.argv )
     if argv:
         gdal2tiles = GDAL2Tiles( argv[1:] )
         gdal2tiles.process()
+
+if __name__=='__main__':
+    main()

@@ -101,7 +101,8 @@ static int bHasLibXMLBug = -1;
 /*                  CPLHasLibXMLBugWarningCallback()                    */
 /************************************************************************/
 
-static void CPLHasLibXMLBugWarningCallback (void * ctx, const char * msg, ...)
+static void CPLHasLibXMLBugWarningCallback (void * /*ctx*/,
+                                            const char* /*msg*/, ...)
 {
 }
 
@@ -109,10 +110,10 @@ static void CPLHasLibXMLBugWarningCallback (void * ctx, const char * msg, ...)
 /*                          CPLHasLibXMLBug()                           */
 /************************************************************************/
 
-static int CPLHasLibXMLBug()
+static bool CPLHasLibXMLBug()
 {
     if (bHasLibXMLBug >= 0)
-        return bHasLibXMLBug;
+        return CPL_TO_BOOL(bHasLibXMLBug);
 
     static const char szLibXMLBugTester[] =
     "<schema targetNamespace=\"http://foo\" xmlns:foo=\"http://foo\" xmlns=\"http://www.w3.org/2001/XMLSchema\">"
@@ -158,7 +159,7 @@ static int CPLHasLibXMLBug()
                  "Will try to workaround for GML schemas.");
     }
 
-    return bHasLibXMLBug;
+    return CPL_TO_BOOL(bHasLibXMLBug);
 }
 
 #endif
@@ -197,7 +198,7 @@ static CPLXMLNode* CPLExtractSubSchema(CPLXMLNode* psSubXML, CPLXMLNode* psMainS
         {
             /* Add xmlns: from subschema to main schema if missing */
             if (psNext->eType == CXT_Attribute &&
-                strncmp(psNext->pszValue, "xmlns:", 6) == 0 &&
+                STARTS_WITH(psNext->pszValue, "xmlns:") &&
                 CPLGetXMLValue(psMainSchema, psNext->pszValue, NULL) == NULL)
             {
                 CPLXMLNode* psAttr = CPLCreateXMLNode(NULL, CXT_Attribute, psNext->pszValue);
@@ -228,7 +229,7 @@ static CPLXMLNode* CPLExtractSubSchema(CPLXMLNode* psSubXML, CPLXMLNode* psMainS
 /************************************************************************/
 
 /* Return TRUE if the current node must be destroyed */
-static int CPLWorkaroundLibXMLBug(CPLXMLNode* psIter)
+static bool CPLWorkaroundLibXMLBug(CPLXMLNode* psIter)
 {
     if (psIter->eType == CXT_Element &&
         strcmp(psIter->pszValue, "element") == 0 &&
@@ -276,7 +277,7 @@ static int CPLWorkaroundLibXMLBug(CPLXMLNode* psIter)
               strcmp(CPLGetXMLValue(psIter, "name", ""), "CategoryExtentType") == 0))
     {
         /* Destroy this element */
-        return TRUE;
+        return true;
     }
 
     /* For GML 3.2.1 */
@@ -324,7 +325,7 @@ static int CPLWorkaroundLibXMLBug(CPLXMLNode* psIter)
         psIter->psChild->psNext = psComplexType;
     }
 
-    return FALSE;
+    return false;
 }
 #endif
 
@@ -455,8 +456,8 @@ CPLXMLNode* CPLLoadSchemaStrInternal(CPLHashSet* hSetSchemas,
                 if (psIter2->eType == CXT_Attribute &&
                     strcmp(psIter2->pszValue, "schemaLocation") == 0 &&
                     psIter2->psChild != NULL &&
-                    strncmp(psIter2->psChild->pszValue, "http://", 7) != 0 &&
-                    strncmp(psIter2->psChild->pszValue, "ftp://", 6) != 0 &&
+                    !STARTS_WITH(psIter2->psChild->pszValue, "http://") &&
+                    !STARTS_WITH(psIter2->psChild->pszValue, "ftp://") &&
                     /* If the top file is our warping file, don't alter the path of the import */
                     strstr(pszFile, "/vsimem/CPLValidateXML_") == NULL )
                 {
@@ -685,7 +686,7 @@ xmlParserInputPtr CPLExternalEntityLoader (const char * URL,
         pszResolved = NULL;
     }
 
-    if (strncmp(URL, "http://", 7) == 0)
+    if (STARTS_WITH(URL, "http://"))
     {
         /* Make sure to use http://schemas.opengis.net/ */
         /* when gml/2 or gml/3 is detected */
@@ -726,21 +727,19 @@ xmlParserInputPtr CPLExternalEntityLoader (const char * URL,
                 return xmlNewStringInputStream(context, (const xmlChar*) szXLINK_XSD);
             }
         }
-        else if (strncmp(URL, "http://schemas.opengis.net/",
-                         strlen("http://schemas.opengis.net/")) != 0)
-        {
+        else if (!STARTS_WITH(URL, "http://schemas.opengis.net/"))        {
             CPLDebug("CPL", "Loading %s", URL);
             return pfnLibXMLOldExtranerEntityLoader(URL, ID, context);
         }
     }
-    else if (strncmp(URL, "ftp://", 6) == 0)
+    else if (STARTS_WITH(URL, "ftp://"))
     {
         return pfnLibXMLOldExtranerEntityLoader(URL, ID, context);
     }
-    else if (strncmp(URL, "file://", 7) == 0)
+    else if (STARTS_WITH(URL, "file://"))
     {
         /* Parse file:// URI so as to be able to open them with VSI*L API */
-        if (strncmp(URL, "file://localhost/", 17) == 0)
+        if (STARTS_WITH(URL, "file://localhost/"))
             URL += 16;
         else
             URL += 7;
@@ -753,21 +752,15 @@ xmlParserInputPtr CPLExternalEntityLoader (const char * URL,
     }
 
     CPLString osModURL;
-    if (strncmp(URL, "/vsizip/vsicurl/http%3A//",
-                strlen("/vsizip/vsicurl/http%3A//")) == 0)
-    {
+    if (STARTS_WITH(URL, "/vsizip/vsicurl/http%3A//"))    {
         osModURL = "/vsizip/vsicurl/http://";
         osModURL += URL + strlen("/vsizip/vsicurl/http%3A//");
     }
-    else if (strncmp(URL, "/vsicurl/http%3A//",
-                     strlen("/vsicurl/http%3A//")) == 0)
-    {
+    else if (STARTS_WITH(URL, "/vsicurl/http%3A//"))    {
         osModURL = "vsicurl/http://";
         osModURL += URL + strlen("/vsicurl/http%3A//");
     }
-    else if (strncmp(URL, "http://schemas.opengis.net/",
-                     strlen("http://schemas.opengis.net/")) == 0)
-    {
+    else if (STARTS_WITH(URL, "http://schemas.opengis.net/"))    {
         const char *pszAfterOpenGIS =
                 URL + strlen("http://schemas.opengis.net/");
 
@@ -869,24 +862,37 @@ char* CPLLoadContentFromFile(const char* pszFilename)
     if (fp == NULL)
         return NULL;
     vsi_l_offset nSize;
-    VSIFSeekL(fp, 0, SEEK_END);
+    if( VSIFSeekL(fp, 0, SEEK_END) != 0 )
+    {
+        CPL_IGNORE_RET_VAL(VSIFCloseL(fp));
+        return NULL;
+    }
     nSize = VSIFTellL(fp);
-    VSIFSeekL(fp, 0, SEEK_SET);
+    if( VSIFSeekL(fp, 0, SEEK_SET) != 0 )
+    {
+        CPL_IGNORE_RET_VAL(VSIFCloseL(fp));
+        return NULL;
+    }
     if ((vsi_l_offset)(int)nSize != nSize ||
         nSize > INT_MAX - 1 )
     {
-        VSIFCloseL(fp);
+        CPL_IGNORE_RET_VAL(VSIFCloseL(fp));
         return NULL;
     }
-    char* pszBuffer = (char*)VSIMalloc(nSize + 1);
+    char* pszBuffer = (char*)VSIMalloc((size_t)nSize + 1);
     if (pszBuffer == NULL)
     {
-        VSIFCloseL(fp);
+        CPL_IGNORE_RET_VAL(VSIFCloseL(fp));
         return NULL;
     }
-    VSIFReadL(pszBuffer, 1, nSize, fp);
+    if( (size_t)VSIFReadL(pszBuffer, 1, (size_t)nSize, fp) != (size_t)nSize )
+    {
+        VSIFree(pszBuffer);
+        CPL_IGNORE_RET_VAL(VSIFCloseL(fp));
+        return NULL;
+    }
     pszBuffer[nSize] = '\0';
-    VSIFCloseL(fp);
+    CPL_IGNORE_RET_VAL(VSIFCloseL(fp));
     return pszBuffer;
 }
 
@@ -920,7 +926,7 @@ CPLXMLSchemaPtr CPLLoadXMLSchema(const char* pszXSDFilename)
     xmlSetExternalEntityLoader(CPLExternalEntityLoader);
 
     xmlSchemaParserCtxtPtr pSchemaParserCtxt =
-                            xmlSchemaNewMemParserCtxt(pszStr, strlen(pszStr));
+                            xmlSchemaNewMemParserCtxt(pszStr, static_cast<int>(strlen(pszStr)));
 
     xmlSchemaSetParserErrors(pSchemaParserCtxt,
                              CPLLibXMLWarningErrorCallback,
@@ -994,7 +1000,7 @@ int CPLValidateXML(const char* pszXMLFilename,
         }
         int nRead = (int)VSIFReadL(szHeader, 1, sizeof(szHeader)-1, fpXML);
         szHeader[nRead] = '\0';
-        VSIFCloseL(fpXML);
+        CPL_IGNORE_RET_VAL(VSIFCloseL(fpXML));
     }
 
     /* Workaround following bug : "element FeatureCollection: Schemas validity error : Element '{http://www.opengis.net/wfs}FeatureCollection': No matching global declaration available for the validation root" */
@@ -1029,7 +1035,7 @@ int CPLValidateXML(const char* pszXMLFilename,
         }
         int nRead = (int)VSIFReadL(szHeader, 1, sizeof(szHeader)-1, fpXSD);
         szHeader[nRead] = '\0';
-        VSIFCloseL(fpXSD);
+        CPL_IGNORE_RET_VAL(VSIFCloseL(fpXSD));
 
         if (strstr(szHeader, "gml/3.1.1") != NULL &&
             strstr(szHeader, "gml/3.1.1/base/gml.xsd") == NULL)
@@ -1042,13 +1048,13 @@ int CPLValidateXML(const char* pszXMLFilename,
             osTmpXSDFilename = CPLSPrintf("/vsimem/CPLValidateXML_%p_%p.xsd", pszXMLFilename, pszXSDFilename);
             char* pszEscapedXSDFilename = CPLEscapeString(pszXSDFilename, -1, CPLES_XML);
             VSILFILE* fpMEM = VSIFOpenL(osTmpXSDFilename, "wb");
-            VSIFPrintfL(fpMEM, "<xs:schema xmlns:xs=\"http://www.w3.org/2001/XMLSchema\">\n");
-            VSIFPrintfL(fpMEM, "   <xs:import namespace=\"%s\" schemaLocation=\"%s\"/>\n", pszWFSSchemaNamespace, pszWFSSchemaLocation);
-            VSIFPrintfL(fpMEM, "   <xs:import namespace=\"ignored\" schemaLocation=\"%s\"/>\n", pszEscapedXSDFilename);
+            CPL_IGNORE_RET_VAL(VSIFPrintfL(fpMEM, "<xs:schema xmlns:xs=\"http://www.w3.org/2001/XMLSchema\">\n"));
+            CPL_IGNORE_RET_VAL(VSIFPrintfL(fpMEM, "   <xs:import namespace=\"%s\" schemaLocation=\"%s\"/>\n", pszWFSSchemaNamespace, pszWFSSchemaLocation));
+            CPL_IGNORE_RET_VAL(VSIFPrintfL(fpMEM, "   <xs:import namespace=\"ignored\" schemaLocation=\"%s\"/>\n", pszEscapedXSDFilename));
             if (pszGMLSchemaLocation)
-                VSIFPrintfL(fpMEM, "   <xs:import namespace=\"http://www.opengis.net/gml\" schemaLocation=\"%s\"/>\n", pszGMLSchemaLocation);
-            VSIFPrintfL(fpMEM, "</xs:schema>\n");
-            VSIFCloseL(fpMEM);
+                CPL_IGNORE_RET_VAL(VSIFPrintfL(fpMEM, "   <xs:import namespace=\"http://www.opengis.net/gml\" schemaLocation=\"%s\"/>\n", pszGMLSchemaLocation));
+            CPL_IGNORE_RET_VAL(VSIFPrintfL(fpMEM, "</xs:schema>\n"));
+            CPL_IGNORE_RET_VAL(VSIFCloseL(fpMEM));
             CPLFree(pszEscapedXSDFilename);
         }
     }
@@ -1084,7 +1090,7 @@ int CPLValidateXML(const char* pszXMLFilename,
         }
         xmlFreeDoc(pDoc);
     }
-    else if (strncmp(pszXMLFilename, "/vsi", 4) != 0)
+    else if (!STARTS_WITH(pszXMLFilename, "/vsi"))
     {
         bValid =
             xmlSchemaValidateFile(pSchemaValidCtxt, pszXMLFilename, 0) == 0;

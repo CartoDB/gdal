@@ -34,7 +34,7 @@ CPL_CVSID("$Id$");
 
 /** In GDAL, GDALRasterBand::GetOverview() returns a stand-alone band, that
     may have no parent dataset. This can be inconvenient in certain contexts, where
-    cross-band processing must be done, or when API expect a fully fledge dataset.
+    cross-band processing must be done, or when API expect a fully fledged dataset.
     Furthermore even if overview band has a container dataset, that one often
     fails to declare its projection, geotransform, etc... which make it somehow
     useless. GDALOverviewDataset remedies to those deficiencies.
@@ -156,15 +156,15 @@ GDALDataset* GDALCreateOverviewDataset(GDALDataset* poMainDS, int nOvrLevel,
 /*                        GDALOverviewDataset()                         */
 /************************************************************************/
 
-GDALOverviewDataset::GDALOverviewDataset(GDALDataset* poMainDS,
-                                         int nOvrLevel,
-                                         int bThisLevelOnly,
-                                         int bOwnDS)
+GDALOverviewDataset::GDALOverviewDataset(GDALDataset* poMainDSIn,
+                                         int nOvrLevelIn,
+                                         int bThisLevelOnlyIn,
+                                         int bOwnDSIn)
 {
-    this->poMainDS = poMainDS;
-    this->nOvrLevel = nOvrLevel;
-    this->bOwnDS = bOwnDS;
-    this->bThisLevelOnly = bThisLevelOnly;
+    poMainDS = poMainDSIn;
+    nOvrLevel = nOvrLevelIn;
+    bOwnDS = bOwnDSIn;
+    bThisLevelOnly = bThisLevelOnlyIn;
     eAccess = poMainDS->GetAccess();
     nRasterXSize = poMainDS->GetRasterBand(1)->GetOverview(nOvrLevel)->GetXSize();
     nRasterYSize = poMainDS->GetRasterBand(1)->GetOverview(nOvrLevel)->GetYSize();
@@ -262,14 +262,14 @@ int GDALOverviewDataset::CloseDependentDatasets()
 CPLErr GDALOverviewDataset::IRasterIO( GDALRWFlag eRWFlag,
                                int nXOff, int nYOff, int nXSize, int nYSize,
                                void * pData, int nBufXSize, int nBufYSize,
-                               GDALDataType eBufType, 
+                               GDALDataType eBufType,
                                int nBandCount, int *panBandMap,
                                GSpacing nPixelSpace, GSpacing nLineSpace,
                                GSpacing nBandSpace,
                                GDALRasterIOExtraArg* psExtraArg)
-    
+
 {
-    int iBandIndex; 
+    int iBandIndex;
     CPLErr eErr = CE_None;
 
     /* In case the overview bands are really linked to a dataset, then issue */
@@ -285,8 +285,8 @@ CPLErr GDALOverviewDataset::IRasterIO( GDALRWFlag eRWFlag,
     GDALProgressFunc  pfnProgressGlobal = psExtraArg->pfnProgress;
     void             *pProgressDataGlobal = psExtraArg->pProgressData;
 
-    for( iBandIndex = 0; 
-         iBandIndex < nBandCount && eErr == CE_None; 
+    for( iBandIndex = 0;
+         iBandIndex < nBandCount && eErr == CE_None;
          iBandIndex++ )
     {
         GDALOverviewBand *poBand = (GDALOverviewBand*) GetRasterBand(panBandMap[iBandIndex]);
@@ -301,19 +301,19 @@ CPLErr GDALOverviewDataset::IRasterIO( GDALRWFlag eRWFlag,
         pabyBandData = ((GByte *) pData) + iBandIndex * nBandSpace;
 
         psExtraArg->pfnProgress = GDALScaledProgress;
-        psExtraArg->pProgressData = 
+        psExtraArg->pProgressData =
             GDALCreateScaledProgress( 1.0 * iBandIndex / nBandCount,
                                       1.0 * (iBandIndex + 1) / nBandCount,
                                       pfnProgressGlobal,
                                       pProgressDataGlobal );
 
-        eErr = poBand->IRasterIO( eRWFlag, nXOff, nYOff, nXSize, nYSize, 
+        eErr = poBand->IRasterIO( eRWFlag, nXOff, nYOff, nXSize, nYSize,
                                   (void *) pabyBandData, nBufXSize, nBufYSize,
                                   eBufType, nPixelSpace, nLineSpace, psExtraArg );
 
         GDALDestroyScaledProgress( psExtraArg->pProgressData );
     }
-    
+
     psExtraArg->pfnProgress = pfnProgressGlobal;
     psExtraArg->pProgressData = pProgressDataGlobal;
 
@@ -340,23 +340,11 @@ CPLErr GDALOverviewDataset::GetGeoTransform( double * padfTransform )
     double adfGeoTransform[6];
     if( poMainDS->GetGeoTransform(adfGeoTransform) == CE_None )
     {
-        if( adfGeoTransform[2] == 0.0 && adfGeoTransform[4] == 0.0 )
-        {
-            adfGeoTransform[1] *= (double)poMainDS->GetRasterXSize() / nRasterXSize;
-            adfGeoTransform[5] *= (double)poMainDS->GetRasterYSize() / nRasterYSize;
-        }
-        else
-        {
-            /* If the x and y ratios are not equal, then we cannot really */
-            /* compute a geotransform */
-            double dfRatio = (double)poMainDS->GetRasterXSize() / nRasterXSize;
-            adfGeoTransform[1] *= dfRatio;
-            adfGeoTransform[2] *= dfRatio;
-            adfGeoTransform[4] *= dfRatio;
-            adfGeoTransform[5] *= dfRatio;
-        }
+        adfGeoTransform[1] *= (double)poMainDS->GetRasterXSize() / nRasterXSize;
+        adfGeoTransform[2] *= (double)poMainDS->GetRasterYSize() / nRasterYSize;
+        adfGeoTransform[4] *= (double)poMainDS->GetRasterXSize() / nRasterXSize;
+        adfGeoTransform[5] *= (double)poMainDS->GetRasterYSize() / nRasterYSize;
         memcpy( padfTransform, adfGeoTransform, sizeof(double)*6 );
-
         return CE_None;
     }
     else
@@ -392,7 +380,7 @@ const GDAL_GCP *GDALOverviewDataset::GetGCPs()
 {
     if( pasGCPList != NULL )
         return pasGCPList;
-    
+
     const GDAL_GCP* pasGCPsMain = poMainDS->GetGCPs();
     if( pasGCPsMain == NULL )
         return NULL;
@@ -506,13 +494,13 @@ const char *GDALOverviewDataset::GetMetadataItem( const char * pszName,
 /*                          GDALOverviewBand()                          */
 /************************************************************************/
 
-GDALOverviewBand::GDALOverviewBand(GDALOverviewDataset* poDS, int nBand)
+GDALOverviewBand::GDALOverviewBand(GDALOverviewDataset* poDSIn, int nBandIn)
 {
-    this->poDS = poDS;
-    this->nBand = nBand;
-    poUnderlyingBand = poDS->poMainDS->GetRasterBand(nBand)->GetOverview(poDS->nOvrLevel);
-    nRasterXSize = poDS->nRasterXSize;
-    nRasterYSize = poDS->nRasterYSize;
+    poDS = poDSIn;
+    nBand = nBandIn;
+    poUnderlyingBand = poDSIn->poMainDS->GetRasterBand(nBand)->GetOverview(poDSIn->nOvrLevel);
+    nRasterXSize = poDSIn->nRasterXSize;
+    nRasterYSize = poDSIn->nRasterYSize;
     eDataType = poUnderlyingBand->GetRasterDataType();
     poUnderlyingBand->GetBlockSize(&nBlockXSize, &nBlockYSize);
 }

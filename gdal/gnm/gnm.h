@@ -322,7 +322,7 @@ public:
      *	  "ALLOW CONNECTS layer1 WITH layer2 VIA layer3"
      *
      * @param pszRuleStr Rule string which will parsed. If the parsing was
-     *        successful the the rule will start having effect immediately.
+     *        successful, the rule will start having effect immediately.
      * @return CE_None on success.
      */
     virtual CPLErr CreateRule (const char *pszRuleStr);
@@ -382,7 +382,7 @@ public:
     virtual CPLErr ChangeBlockState (GNMGFID nFID, bool bIsBlock);
 
     /**
-     * @brief Change all vertice and edges block state.
+     * @brief Change all vertices and edges block state.
      *
      * This is mainly use for unblock all vertices and edges.
      *
@@ -403,7 +403,7 @@ protected:
     virtual CPLErr CheckLayerDriver(const char* pszDefaultDriverName,
                                  char** papszOptions);
     /**
-     * @brief Check if provided OGR driver acceptad as storage for network data
+     * @brief Check if provided OGR driver accepted as storage for network data
      * @param pszDriverName The driver name
      * @return true if supported, else false
      */
@@ -465,7 +465,7 @@ protected:
 
 /**
  * GNM layer which represents a geography network layer of generic format.
- * The class override some OGRLayer methods to fullfill the network requirements.
+ * The class override some OGRLayer methods to fulfill the network requirements.
  *
  * @since GDAL 2.1
  */

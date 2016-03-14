@@ -269,7 +269,7 @@ void GDALPDFObject::Serialize(CPLString& osStr)
             double dfRealNonRounded = GetReal();
             double dfReal = ROUND_TO_INT_IF_CLOSE(dfRealNonRounded);
             if (dfReal == (double)(GIntBig)dfReal)
-                sprintf(szReal, CPL_FRMT_GIB, (GIntBig)dfReal);
+                snprintf(szReal, sizeof(szReal), CPL_FRMT_GIB, (GIntBig)dfReal);
             else if (CanRepresentRealAsString())
             {
                 /* Used for OGC BP numeric values */
@@ -1355,10 +1355,11 @@ char* GDALPDFStreamPoppler::GetBytes()
     {
         m_nLength = gstr->getLength();
         char* pszContent = (char*) VSIMalloc(m_nLength + 1);
-        if (!pszContent)
-            return NULL;
-        memcpy(pszContent, gstr->getCString(), m_nLength);
-        pszContent[m_nLength] = '\0';
+        if (pszContent)
+        {
+            memcpy(pszContent, gstr->getCString(), m_nLength);
+            pszContent[m_nLength] = '\0';
+        }
         delete gstr;
         return pszContent;
     }
@@ -2047,7 +2048,7 @@ static double CPLRoundToMoreLikelyDouble(float f)
     pszDot ++;
     if( pszDot[0] == 0 || pszDot[1] == 0 )
         return d;
-    if( strncmp(pszDot + 2, "99", 2) == 0 )
+    if( STARTS_WITH(pszDot + 2, "99") )
     {
         pszDot[2] = 0;
         double d2 = CPLAtof(szBuffer) + 0.01;
@@ -2055,7 +2056,7 @@ static double CPLRoundToMoreLikelyDouble(float f)
         if( f == f2 || nextafterf(f,f+1.0f) == f2 || nextafterf(f,f-1.0f) == f2 )
             d = d2;
     }
-    else if( strncmp(pszDot + 2, "00", 2) == 0 )
+    else if( STARTS_WITH(pszDot + 2, "00") )
     {
         pszDot[2] = 0;
         double d2 = CPLAtof(szBuffer);
@@ -2232,7 +2233,7 @@ std::map<CPLString, GDALPDFObject*>& GDALPDFDictionaryPdfium::GetValues()
         // No object for this key
         if(!poVal)
           continue;
-        
+
         const char* pszKey = key.c_str();
         // Objects exists in the map
         if(m_map.find(pszKey) != m_map.end())

@@ -53,10 +53,10 @@ OGRCircularString::OGRCircularString()
 
 /**
  * \brief Copy constructor.
- * 
+ *
  * Note: before GDAL 2.1, only the default implementation of the constructor
  * existed, which could be unsafe to use.
- * 
+ *
  * @since GDAL 2.1
  */
 
@@ -80,10 +80,10 @@ OGRCircularString::~OGRCircularString()
 
 /**
  * \brief Assignment operator.
- * 
+ *
  * Note: before GDAL 2.1, only the default implementation of the operator
  * existed, which could be unsafe to use.
- * 
+ *
  * @since GDAL 2.1
  */
 
@@ -103,7 +103,11 @@ OGRCircularString& OGRCircularString::operator=( const OGRCircularString& other 
 OGRwkbGeometryType OGRCircularString::getGeometryType() const
 
 {
-    if( getCoordinateDimension() == 3 )
+    if( (flags & OGR_G_3D) && (flags & OGR_G_MEASURED) )
+        return wkbCircularStringZM;
+    else if( flags & OGR_G_MEASURED  )
+        return wkbCircularStringM;
+    else if( flags & OGR_G_3D )
         return wkbCircularStringZ;
     else
         return wkbCircularString;
@@ -205,7 +209,7 @@ OGRErr OGRCircularString::exportToWkt( char ** ppszDstText,
 /************************************************************************/
 /*                             get_Length()                             */
 /*                                                                      */
-/*      For now we return a simple euclidian 2D distance.               */
+/*      For now we return a simple euclidean 2D distance.               */
 /************************************************************************/
 
 double OGRCircularString::get_Length() const
@@ -465,7 +469,7 @@ void OGRCircularString::Value( double dfDistance, OGRPoint * poPoint ) const
         StartPoint( poPoint );
         return;
     }
-    
+
     for(i=0;i<nPointCount-2;i+=2)
     {
         double x0 = paoPoints[i].x, y0 = paoPoints[i].y,
@@ -483,13 +487,13 @@ void OGRCircularString::Value( double dfDistance, OGRPoint * poPoint ) const
             double dfSegLength = fabs(alpha2 - alpha0) * R;
             if (dfSegLength > 0)
             {
-                if( (dfLength <= dfDistance) && ((dfLength + dfSegLength) >= 
+                if( (dfLength <= dfDistance) && ((dfLength + dfSegLength) >=
                                                 dfDistance) )
                 {
                     double      dfRatio;
 
                     dfRatio = (dfDistance - dfLength) / dfSegLength;
-                    
+
                     double alpha = alpha0 * (1 - dfRatio) + alpha2 * dfRatio;
                     double x = cx + R * cos(alpha), y = cy + R * sin(alpha);
 
@@ -499,7 +503,7 @@ void OGRCircularString::Value( double dfDistance, OGRPoint * poPoint ) const
                     if( getCoordinateDimension() == 3 )
                         poPoint->setZ( padfZ[i] * (1 - dfRatio)
                                     + padfZ[i+2] * dfRatio );
-                    
+
                     return;
                 }
 
@@ -512,7 +516,7 @@ void OGRCircularString::Value( double dfDistance, OGRPoint * poPoint ) const
             double dfSegLength = sqrt((x2-x0)*(x2-x0)+(y2-y0)*(y2-y0));
             if (dfSegLength > 0)
             {
-                if( (dfLength <= dfDistance) && ((dfLength + dfSegLength) >= 
+                if( (dfLength <= dfDistance) && ((dfLength + dfSegLength) >=
                                                 dfDistance) )
                 {
                     double      dfRatio;
@@ -527,7 +531,7 @@ void OGRCircularString::Value( double dfDistance, OGRPoint * poPoint ) const
                     if( getCoordinateDimension() == 3 )
                         poPoint->setZ( padfZ[i] * (1 - dfRatio)
                                     + padfZ[i+2] * dfRatio );
-                    
+
                     return;
                 }
 

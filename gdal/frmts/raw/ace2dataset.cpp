@@ -28,14 +28,11 @@
  * DEALINGS IN THE SOFTWARE.
  ****************************************************************************/
 
-#include "rawdataset.h"
+#include "gdal_frmts.h"
 #include "ogr_spatialref.h"
+#include "rawdataset.h"
 
 CPL_CVSID("$Id$");
-
-CPL_C_START
-void    GDALRegister_ACE2(void);
-CPL_C_END
 
 static const char * const apszCategorySource[] =
 {
@@ -173,11 +170,11 @@ const char *ACE2Dataset::GetProjectionRef()
 /*                          ACE2RasterBand()                            */
 /************************************************************************/
 
-ACE2RasterBand::ACE2RasterBand(VSILFILE* fpRaw,
-                               GDALDataType eDataType,
+ACE2RasterBand::ACE2RasterBand(VSILFILE* fpRawIn,
+                               GDALDataType eDataTypeIn,
                                int nXSize, int nYSize) :
-    RawRasterBand( fpRaw, 0, GDALGetDataTypeSize(eDataType) / 8,
-                   nXSize * GDALGetDataTypeSize(eDataType) / 8, eDataType,
+    RawRasterBand( fpRawIn, 0, GDALGetDataTypeSize(eDataTypeIn) / 8,
+                   nXSize * GDALGetDataTypeSize(eDataTypeIn) / 8, eDataTypeIn,
                    CPL_IS_LSB, nXSize, nYSize, TRUE, TRUE)
 {
 }
@@ -206,11 +203,11 @@ char **ACE2RasterBand::GetCategoryNames()
     const char* pszName = poDS->GetDescription();
 
     if (strstr(pszName, "_SOURCE_"))
-        return (char**) apszCategorySource;
+        return const_cast<char **>( apszCategorySource );
     if (strstr(pszName, "_QUALITY_"))
-        return (char**) apszCategoryQuality;
+        return const_cast<char **>( apszCategoryQuality );
     if (strstr(pszName, "_CONF_"))
-        return (char**) apszCategoryConfidence;
+        return const_cast<char **>( apszCategoryConfidence );
 
     return NULL;
 }
@@ -331,7 +328,7 @@ GDALDataset *ACE2Dataset::Open( GDALOpenInfo * poOpenInfo )
     CPLString osFilename = poOpenInfo->pszFilename;
     if ((strstr(poOpenInfo->pszFilename, ".ACE2.gz") ||
          strstr(poOpenInfo->pszFilename, ".ace2.gz")) &&
-        strncmp(poOpenInfo->pszFilename, "/vsigzip/", 9) != 0)
+        !STARTS_WITH(poOpenInfo->pszFilename, "/vsigzip/"))
         osFilename = "/vsigzip/" + osFilename;
 
     VSILFILE* fpImage = VSIFOpenL( osFilename, "rb+" );
@@ -379,17 +376,15 @@ GDALDataset *ACE2Dataset::Open( GDALOpenInfo * poOpenInfo )
 void GDALRegister_ACE2()
 
 {
-    if( GDALGetDriverByName( "ACE2" ) == NULL )
+    if( GDALGetDriverByName( "ACE2" ) != NULL )
         return;
 
-    GDALDriver  *poDriver = new GDALDriver();
+    GDALDriver *poDriver = new GDALDriver();
 
     poDriver->SetDescription( "ACE2" );
     poDriver->SetMetadataItem( GDAL_DCAP_RASTER, "YES" );
-    poDriver->SetMetadataItem( GDAL_DMD_LONGNAME,
-                               "ACE2" );
-    poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC,
-                               "frmt_various.html#ACE2" );
+    poDriver->SetMetadataItem( GDAL_DMD_LONGNAME, "ACE2" );
+    poDriver->SetMetadataItem( GDAL_DMD_HELPTOPIC, "frmt_various.html#ACE2" );
     poDriver->SetMetadataItem( GDAL_DMD_EXTENSION, "ACE2" );
     poDriver->SetMetadataItem( GDAL_DCAP_VIRTUALIO, "YES" );
 

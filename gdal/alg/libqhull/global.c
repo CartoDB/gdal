@@ -597,15 +597,15 @@ void qh_init_qhull_command(int argc, char *argv[]) {
     'prompt' in unix.c for documentation
 
   design:
-    for each space-deliminated option group
+    for each space-delimited option group
       if top-level option
         check syntax
-        append approriate option to option string
+        append appropriate option to option string
         set appropriate global variable or append printFormat to print options
       else
         for each sub-option
           check syntax
-          append approriate option to option string
+          append appropriate option to option string
           set appropriate global variable or append printFormat to print options
 */
 void qh_initflags(char *command) {
@@ -1473,7 +1473,7 @@ void qh_initqhull_buffers(void) {
   design:
     initialize points array from input arguments
     test for qh.ZEROcentrum
-      (i.e., use opposite vertex instead of cetrum for convexity testing)
+      (i.e., use opposite vertex instead of centrum for convexity testing)
     initialize qh.CENTERtype, qh.normal_size,
       qh.center_size, qh.TRACEpoint/level,
     initialize and test random numbers
