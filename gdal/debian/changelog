@@ -1,10 +1,17 @@
-gdal2.1-static-bin (2.1.0+svn.33718-precise1) precise; urgency=medium
+gdal2.1-static (2.1.0+svn.33718-precise2) precise; urgency=medium
+
+  * Rename source package to gdal2.1-static
+  * Rename binary package to gdal2.1-static-bin
+
+ -- Rafa de la Torre <rtorre@cartodb.com>  Wed, 16 Mar 2016 15:21:33 +0100
+
+gdal2.1-static (2.1.0+svn.33718-precise1) precise; urgency=medium
 
   * Pick changes from upstream at r33718
 
  --  Rafa de la Torre <rtorre@cartodb.com>  Mon, 14 Mar 2016 17:56:02 +0000
 
-gdal2.1-static-bin (2.1.0+svn.30757-precise1) precise; urgency=medium
+gdal2.1-static (2.1.0+svn.30757-precise1) precise; urgency=medium
 
   * Initial release, changes from upstream at r30757
   * Allow for parallel builds of debian package

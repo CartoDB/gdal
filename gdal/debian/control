@@ -1,4 +1,4 @@
-Source: gdal2.1-static-bin
+Source: gdal2.1-static
 Section: science
 Priority: extra
 Maintainer: Debian GIS Project <pkg-grass-devel@lists.alioth.debian.org>
