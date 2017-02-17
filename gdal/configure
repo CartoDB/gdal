@@ -4493,14 +4493,14 @@ else
   :
 fi
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C compiler accepts -Werror -Wformat -Werror=format-security -Wno-format-nonliteral" >&5
-$as_echo_n "checking whether C compiler accepts -Werror -Wformat -Werror=format-security -Wno-format-nonliteral... " >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C compiler accepts -Werror -Wformat -Wno-format-nonliteral" >&5
+$as_echo_n "checking whether C compiler accepts -Werror -Wformat -Wno-format-nonliteral... " >&6; }
 if ${ax_cv_check_cflags___Werror__Wformat__Werror_format_security__Wno_format_nonliteral+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
   ax_check_save_flags=$CFLAGS
-  CFLAGS="$CFLAGS  -Werror -Wformat -Werror=format-security -Wno-format-nonliteral"
+  CFLAGS="$CFLAGS  -Werror -Wformat -Wno-format-nonliteral"
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -4523,7 +4523,7 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_check_cflags___Werror__Wformat__Werror_format_security__Wno_format_nonliteral" >&5
 $as_echo "$ax_cv_check_cflags___Werror__Wformat__Werror_format_security__Wno_format_nonliteral" >&6; }
 if test "x$ax_cv_check_cflags___Werror__Wformat__Werror_format_security__Wno_format_nonliteral" = xyes; then :
-  C_WFLAGS="$C_WFLAGS -Werror=format-security -Wno-format-nonliteral" CXX_WFLAGS="$CXX_WFLAGS -Werror=format-security -Wno-format-nonliteral"
+  C_WFLAGS="$C_WFLAGS -Wno-format-nonliteral" CXX_WFLAGS="$CXX_WFLAGS -Wno-format-nonliteral"
 else
   :
 fi
