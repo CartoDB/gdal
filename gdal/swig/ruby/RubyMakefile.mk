@@ -20,11 +20,11 @@ include $(GDAL_ROOT)/GDALmake.opt
 RUBY_MODULES_LIN = gdal.so ogr.so gdalconst.so osr.so  # Linux, Solaris, ...
 RUBY_MODULES_MAC = gdal.bundle ogr.bundle gdalconst.bundle osr.bundle # Darwin
 
-RUBY_INCLUDE_DIR := $(shell ruby -rrbconfig -e "puts Config::CONFIG['rubyhdrdir'] || Config::CONFIG['archdir']")
-RUBY_ARCH_INCLUDE_DIR := $(shell ruby -rrbconfig -e "puts Config::CONFIG['rubyhdrdir'] + '/' + Config::CONFIG['arch'] unless Config::CONFIG['rubyhdrdir'].nil?")
-RUBY_LIB_DIR := $(shell ruby -rrbconfig -e "puts Config::CONFIG['libdir']")
-RUBY_SO_NAME := $(shell ruby -rrbconfig -e "puts Config::CONFIG['RUBY_SO_NAME']")
-RUBY_EXTENSIONS_DIR := $(shell ruby -rrbconfig -e "puts Config::CONFIG['sitearchdir']")
+RUBY_INCLUDE_DIR := $(shell ruby -rrbconfig -e "puts RbConfig::CONFIG['rubyhdrdir'] || RbConfig::CONFIG['archdir']")
+RUBY_ARCH_INCLUDE_DIR := $(shell ruby -rrbconfig -e "puts RbConfig::CONFIG['rubyhdrdir'] + '/' + RbConfig::CONFIG['arch'] unless RbConfig::CONFIG['rubyhdrdir'].nil?")
+RUBY_LIB_DIR := $(shell ruby -rrbconfig -e "puts RbConfig::CONFIG['libdir']")
+RUBY_SO_NAME := $(shell ruby -rrbconfig -e "puts RbConfig::CONFIG['RUBY_SO_NAME']")
+RUBY_EXTENSIONS_DIR := $(shell ruby -rrbconfig -e "puts RbConfig::CONFIG['sitearchdir']")
 INSTALL_DIR := $(RUBY_EXTENSIONS_DIR)/gdal
 
 ifeq ($(RUBY_ARCH_INCLUDE_DIR),)
@@ -37,11 +37,11 @@ endif
 
 ifeq ("$(shell uname -s)", "Darwin")
 RUBY_MODULES=$(RUBY_MODULES_MAC)
-LDFLAGS += -Xcompiler -bundle -L$(RUBY_LIB_DIR)
+LDFLAGS += -bundle -L$(RUBY_LIB_DIR)
 RUBY_LIB := -l$(RUBY_SO_NAME)
 else
 RUBY_MODULES=$(RUBY_MODULES_LIN)
-LDFLAGS += -Xcompiler -shared -L$(RUBY_LIB_DIR)
+LDFLAGS += -shared -L$(RUBY_LIB_DIR)
 RUBY_LIB := -l$(RUBY_SO_NAME)
 endif
 
