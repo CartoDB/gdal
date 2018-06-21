@@ -1,6 +1,20 @@
 GDAL - Geospatial Data Abstraction Library
 ====
 
+## A note from CARTO
+
+This repository is **frozen and deprecated**. Last released version can be found in tag [`2.1.0+svn.33718-precise2`](https://github.com/CartoDB/gdal/releases/tag/2.1.0%2Bsvn.33718-precise2).
+
+CARTO started to build and package from the upstream repository, as we no longer need to maintain our patched versions.
+
+You can find some packages from these sources here:
+
+- https://launchpad.net/~cartodb/+archive/ubuntu/gis
+- https://github.com/CartoDB/gdal-static-bin-debian
+
+---
+
+
 | Environment              | Status        |
 | ------------------------ |:-------------:|
 | Ubuntu 12.04 64 bit      | [![Build Status](https://travis-ci.org/OSGeo/gdal.svg?branch=trunk)](https://travis-ci.org/OSGeo/gdal) |
